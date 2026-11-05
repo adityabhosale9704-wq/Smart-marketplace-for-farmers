@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { ArrowRight, Leaf, Search, Sprout, Users } from 'lucide-react'
 import MarketplaceImage from './MarketplaceImage'
 
@@ -8,7 +9,7 @@ export default function HeroSection({ query, onQueryChange }: { query: string; o
         <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white/80 px-3 py-1.5 text-xs font-semibold tracking-wide text-emerald-800"><Sprout className="size-4" aria-hidden="true" /> ROOTED IN TRUST. GROWN TOGETHER.</span>
         <h1 className="mt-6 max-w-xl text-4xl leading-tight font-bold tracking-tight text-emerald-950 sm:text-5xl lg:text-6xl">Fresh From the Farm,<br /><span className="text-emerald-700">Direct to You</span></h1>
         <p className="mt-6 max-w-lg text-lg leading-relaxed text-stone-600">Good produce. Real connections. Discover agricultural products from Indian farmers and bring your own harvest to a wider community.</p>
-        <div className="mt-7 flex flex-wrap gap-3"><a className="button-primary" href="#products">Explore Products <ArrowRight className="size-4" aria-hidden="true" /></a><a className="button-secondary" href="#sell">Start Selling</a></div>
+        <div className="mt-7 flex flex-wrap gap-3"><Link className="button-primary" to="/marketplace">Explore Products <ArrowRight className="size-4" aria-hidden="true" /></Link><a className="button-secondary" href="#sell">Start Selling</a></div>
         <form action="#products" className="mt-8 flex rounded-xl border border-stone-200 bg-white p-1.5 shadow-sm" role="search" onSubmit={(event) => { event.preventDefault(); document.getElementById('products')?.scrollIntoView({ behavior: 'instant' }) }}>
           <label className="flex min-w-0 flex-1 items-center gap-3 pl-3"><Search className="size-5 shrink-0 text-stone-400" aria-hidden="true" /><span className="sr-only">Search demonstration products</span><input type="search" value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder="Try tomatoes, rice, or a location..." className="min-w-0 w-full py-2 text-sm outline-none" /></label>
           <button className="button-primary px-4" type="submit">Search</button>

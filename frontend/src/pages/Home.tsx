@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { ArrowRight, Carrot, Cherry, Wheat, Bean, Sprout, Flame, Search, Handshake, Tractor } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
@@ -7,7 +8,6 @@ import CategoryCard from '../components/CategoryCard'
 import type { Category } from '../components/CategoryCard'
 import ProductCard from '../components/ProductCard'
 import { mockProducts } from '../data/mockProducts'
-import type { CategoryId } from '../types/product'
 
 const categories: Category[] = [
   { id: 'vegetables', name: 'Vegetables', icon: Carrot },
@@ -25,11 +25,9 @@ const steps = [
 
 export default function Home() {
   const [query, setQuery] = useState('')
-  const [category, setCategory] = useState<CategoryId | null>(null)
   const products = mockProducts.filter(product => {
-    const matchesCategory = !category || product.category === category
     const searchText = `${product.name} ${product.category} ${product.location} ${product.seller}`.toLowerCase()
-    return matchesCategory && searchText.includes(query.trim().toLowerCase())
+    return searchText.includes(query.trim().toLowerCase())
   })
   return <>
     <Navbar />
@@ -37,14 +35,14 @@ export default function Home() {
       <HeroSection query={query} onQueryChange={setQuery} />
       <section id="categories" className="page-width py-14 sm:py-18" aria-labelledby="categories-title">
         <p className="eyebrow">SOMETHING FOR EVERY NEED</p><h2 id="categories-title" className="section-title">Explore by category</h2><p className="mt-3 text-stone-500">From everyday essentials to your next harvest.</p>
-        <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">{categories.map(item => <CategoryCard key={item.id} category={item} selected={category === item.id} onSelect={id => setCategory(category === id ? null : id)} />)}</div>
+        <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">{categories.map(item => <CategoryCard key={item.id} category={item} />)}</div>
       </section>
       <section id="products" className="border-y border-stone-100 bg-stone-50 py-14 sm:py-18" aria-labelledby="products-title">
         <div className="page-width">
-          <div className="flex flex-wrap items-end justify-between gap-5"><div><p className="eyebrow">DISCOVER THE HARVEST</p><h2 id="products-title" className="section-title">Fresh picks from our farms</h2><p className="mt-3 max-w-2xl text-sm leading-6 text-stone-500">Demonstration listings only. Prices, sellers, locations, and stock are illustrative; purchases are not available.</p></div><button onClick={() => { setCategory(null); setQuery('') }} className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-800">View all products <ArrowRight className="size-4" aria-hidden="true" /></button></div>
-          <p role="status" className="mt-6 text-sm text-stone-500">{products.length} sample products{category ? ` in ${category}` : ''}{query.trim() ? ` matching ?${query.trim()}?` : ''}</p>
+          <div className="flex flex-wrap items-end justify-between gap-5"><div><p className="eyebrow">DISCOVER THE HARVEST</p><h2 id="products-title" className="section-title">Fresh picks from our farms</h2><p className="mt-3 max-w-2xl text-sm leading-6 text-stone-500">Demonstration listings only. Prices, sellers, locations, and stock are illustrative; purchases are not available.</p></div><Link to="/marketplace" className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-800">View all products <ArrowRight className="size-4" aria-hidden="true" /></Link></div>
+          <p role="status" className="mt-6 text-sm text-stone-500">{products.length} sample products{query.trim() ? ` matching "${query.trim()}"` : ''}</p>
           <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">{products.map(product => <ProductCard key={product.id} product={product} />)}</div>
-          {products.length === 0 && <div className="mt-5 rounded-xl border border-dashed border-stone-300 bg-white p-10 text-center"><h3 className="font-semibold">No sample products found</h3><p className="mt-2 text-sm text-stone-500">Try another search or use ?View all products? to clear the filters.</p></div>}
+          {products.length === 0 && <div className="mt-5 rounded-xl border border-dashed border-stone-300 bg-white p-10 text-center"><h3 className="font-semibold">No sample products found</h3><p className="mt-2 text-sm text-stone-500">Try another search or explore all products in the marketplace.</p></div>}
         </div>
       </section>
       <section id="about" className="page-width py-16 sm:py-20" aria-labelledby="steps-title">

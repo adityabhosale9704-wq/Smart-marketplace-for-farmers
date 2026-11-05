@@ -10,7 +10,7 @@ export default function ProductCard({ product }: { product: Product }) {
     <div className="p-5">
       <h3 className="text-lg font-bold tracking-tight text-stone-900">{product.name}</h3>
       <p className="mt-2 text-xl font-bold text-emerald-800">{currency.format(product.price)}<span className="text-sm font-normal text-stone-500"> / {product.unit}</span></p>
-      <p className="mt-1 text-xs text-stone-500">{product.availableQuantity} {product.unit} available ? sample stock</p>
+      <p className="mt-1 text-xs text-stone-500">{product.availableQuantity} {product.unit} available - sample stock</p>
       <div className="mt-4 space-y-2 border-t border-stone-100 pt-4 text-xs text-stone-600"><p className="flex items-center gap-2"><UserRound className="size-3.5 shrink-0" aria-hidden="true" />{product.seller}</p><p className="flex items-center gap-2"><MapPin className="size-3.5 shrink-0" aria-hidden="true" />{product.location}</p></div>
     </div>
   </article>

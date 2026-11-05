@@ -1,13 +1,13 @@
 # Smart Marketplace for Farmers
 
-A marketplace for buying and selling agricultural products. Phase 1 Step 2 provides a responsive FarmMarket homepage with demonstration product listings.
+A marketplace for buying and selling agricultural products. Phase 1 Step 3 includes a responsive FarmMarket homepage and a searchable, filterable Marketplace using demonstration product listings.
 
 ## Stack
 
 - HTML5, React, and TypeScript
 - Vite for development and production builds
 - Tailwind CSS with the official @tailwindcss/vite plugin
-- React Router (react-router-dom), for the homepage and a fallback Not Found route
+- React Router (react-router-dom), for Home, Marketplace, and a fallback Not Found route
 - Lucide React icons
 
 Planned backend: Node.js and Express.js. Planned database and authentication: Supabase PostgreSQL, Supabase Auth, and JWT. None are integrated yet.
@@ -34,17 +34,26 @@ Build output is written to frontend/dist. Lint uses the checker supplied by the 
 
 ## Source structure
 
-src/assets, components, pages, layouts, routes, types, data, services, and hooks reserve space for future work. Empty directories contain .gitkeep files so Git can track them. The homepage is implemented at /. Other feature pages are deferred.
+src/assets, components, pages, layouts, routes, types, data, services, and hooks reserve space for future work. Empty directories contain .gitkeep files so Git can track them. The homepage is implemented at /. The Marketplace is available at /marketplace. Other feature pages are deferred.
 
 Do not commit credentials or secrets. Environment files, dependencies, and build output are ignored. Only sanitized example environment files should be committed.
 
 
 ## Homepage preview
 
-The homepage includes mobile navigation, category filters, a search over the eight local sample products, product cards, an explanation of the planned buying and selling flow, and a seller invitation.
+The homepage includes mobile navigation, category links to Marketplace, a search over the eight local sample products, product cards, an explanation of the planned buying and selling flow, and a seller invitation.
 
-Product fixtures live in frontend/src/data/mockProducts.ts, with the Product contract in frontend/src/types/product.ts. Search matches product names, categories, locations, and sellers; category selection combines with search. View all products clears both filters.
+Product fixtures live in frontend/src/data/mockProducts.ts, with the Product contract in frontend/src/types/product.ts. Search matches product names, categories, locations, and sellers; homepage category links open the filtered Marketplace. View all products opens the Marketplace.
 
 All listings, prices, quantities, seller names, and locations are demonstration data. No account creation, login, cart, checkout, ordering, messaging, seller registration, backend, or Supabase integration is implemented. Unavailable actions are marked coming soon. Unknown routes show a minimal Not Found screen.
 
 Images use public Unsplash URLs and require internet access. Failed images show an accessible plant-themed fallback. External photographs are illustrative and do not verify a listed product or farm.
+
+
+## Phase 1 Step 3: Marketplace
+
+Open /marketplace to search local demonstration listings by product name, category, or seller. Search is case-insensitive and normalizes surrounding and repeated whitespace. Combine category, exact location, and optional minimum/maximum INR price filters. Category links use query parameters, for example /marketplace?category=vegetables; browser navigation restores the category selection.
+
+Choose name or numeric price sorting in either direction. Prices are per listed unit (kg or quintal), so sorting does not compare equivalent quantities. Blank bounds are unrestricted; negative, non-finite, and reversed ranges display an error until corrected. Clear All Filters / Reset Filters clears search, category, location, price bounds, and restores name sorting.
+
+The desktop sidebar becomes a collapsible filter panel on smaller screens. Product cards and image fallbacks are shared with the homepage. All eight listings remain mock data. No product details, orders, checkout, authentication, backend, or Supabase integration is implemented.
