@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useLocation, useSearchParams } from 'react-router-dom'
 import { Search, SlidersHorizontal } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
@@ -8,14 +8,17 @@ import FilterPanel from '../components/FilterPanel'
 import { mockProducts } from '../data/mockProducts'
 import { parseCategory } from '../data/categories'
 import { emptyFilters, filterProducts, priceRangeError } from '../services/filterProducts'
+import type { ProductNavigationState } from '../types/productNavigation'
 import type { ProductFilters, SortOrder } from '../services/filterProducts'
 
 const locations = [...new Set(mockProducts.map(product => product.location))].sort()
 
 export default function Marketplace() {
+  const location = useLocation()
+  const saved = location.state as ProductNavigationState | null
   const [searchParams, setSearchParams] = useSearchParams()
-  const [localFilters, setLocalFilters] = useState<ProductFilters>(emptyFilters)
-  const [sort, setSort] = useState<SortOrder>('name-asc')
+  const [localFilters, setLocalFilters] = useState<ProductFilters>(() => saved?.filters ?? emptyFilters)
+  const [sort, setSort] = useState<SortOrder>(() => saved?.sort ?? 'name-asc')
   const [filtersOpen, setFiltersOpen] = useState(false)
   const category = parseCategory(searchParams.get('category'))
   const filters = useMemo(() => ({ ...localFilters, category }), [localFilters, category])
@@ -87,7 +90,7 @@ export default function Marketplace() {
               <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-950">Prices and price sorting use the numeric amount per listed unit. A kg and a quintal represent different quantities; this is not a like-for-like price comparison.</p>
               {products.length > 0 ? (
                 <div className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-                  {products.map(product => <ProductCard key={product.id} product={product} />)}
+                  {products.map(product => <ProductCard key={product.id} product={product} navigationState={{ returnTo: location.pathname + location.search, filters, sort }} />)}
                 </div>
               ) : (
                 <div className="mt-6 rounded-2xl border border-dashed border-stone-300 bg-white p-8 text-center">

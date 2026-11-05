@@ -3,6 +3,7 @@ export type CategoryId = 'vegetables' | 'fruits' | 'grains' | 'pulses' | 'seeds'
 export interface Product {
   id: string
   name: string
+  description: string
   category: CategoryId
   price: number
   unit: 'kg' | 'quintal'

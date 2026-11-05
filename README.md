@@ -1,6 +1,6 @@
 # Smart Marketplace for Farmers
 
-A marketplace for buying and selling agricultural products. Phase 1 Step 3 includes a responsive FarmMarket homepage and a searchable, filterable Marketplace using demonstration product listings.
+A marketplace for buying and selling agricultural products. Phase 1 Step 4 includes a responsive FarmMarket homepage a searchable, filterable Marketplace, and Product Details pages using demonstration product listings.
 
 ## Stack
 
@@ -56,4 +56,17 @@ Open /marketplace to search local demonstration listings by product name, catego
 
 Choose name or numeric price sorting in either direction. Prices are per listed unit (kg or quintal), so sorting does not compare equivalent quantities. Blank bounds are unrestricted; negative, non-finite, and reversed ranges display an error until corrected. Clear All Filters / Reset Filters clears search, category, location, price bounds, and restores name sorting.
 
-The desktop sidebar becomes a collapsible filter panel on smaller screens. Product cards and image fallbacks are shared with the homepage. All eight listings remain mock data. No product details, orders, checkout, authentication, backend, or Supabase integration is implemented.
+The desktop sidebar becomes a collapsible filter panel on smaller screens. Product cards and image fallbacks are shared with the homepage. All eight listings remain mock data. No orders, checkout, authentication, backend, or Supabase integration is implemented.
+
+
+## Phase 1 Step 4: Product Details
+
+Product names on Home and Marketplace link to /products/:productId (for example /products/tomatoes). Details show the existing sample image, description, seller, location, price, unit, and stock. Invalid IDs and /products without an ID show Product Not Found.
+
+Quantity starts at 1 for available products and changes in whole listed units. Minus stops at 1; plus stops at available stock. Unavailable products show 0 with both controls disabled. The estimated product subtotal is quantity multiplied by the listed unit price, excluding delivery, taxes, and other charges. Quintal listings explain that 1 quintal equals 100 kg.
+
+The shared image fallback remains in use. Add to Cart is disabled and labelled Coming Soon; no cart state or purchases are created. Seller identities, descriptions, and stock are demonstration data with no verification or contact details.
+
+Back to Marketplace restores the originating Marketplace filters and sorting using router navigation state. Category stays in the URL. Direct product links return to the default Marketplace. Filters are not stored as account preferences or persisted across independent sessions.
+
+Manual checks: open /products/tomatoes and /products/rice, try quantity limits, use an invalid ID, and return from a filtered Marketplace listing.
