@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import { Minus, Plus } from 'lucide-react'
 
 interface QuantitySelectorProps {
@@ -8,13 +9,14 @@ interface QuantitySelectorProps {
 }
 
 export default function QuantitySelector({ quantity, availableQuantity, unit, onChange }: QuantitySelectorProps) {
+  const labelId = useId()
   const maximum = Math.max(0, Math.floor(availableQuantity))
   const unavailable = maximum < 1
 
   return (
     <div>
-      <p id="quantity-label" className="text-sm font-semibold">Selected quantity ({unit})</p>
-      <div role="group" aria-labelledby="quantity-label" className="mt-3 inline-flex items-center rounded-lg border border-stone-300 bg-white">
+      <p id={labelId} className="text-sm font-semibold">Selected quantity ({unit})</p>
+      <div role="group" aria-labelledby={labelId} className="mt-3 inline-flex items-center rounded-lg border border-stone-300 bg-white">
         <button type="button" aria-label={`Decrease quantity by 1 ${unit}`} disabled={unavailable || quantity <= 1}
           onClick={() => onChange(Math.max(1, quantity - 1))}
           className="rounded-l-lg p-3 text-emerald-800 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:text-stone-400">

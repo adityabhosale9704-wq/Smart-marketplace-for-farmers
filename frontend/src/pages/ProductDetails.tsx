@@ -1,3 +1,4 @@
+import { useCart } from '../hooks/useCart'
 import { useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { ArrowLeft, ShoppingBasket } from 'lucide-react'
@@ -16,6 +17,9 @@ const currency = new Intl.NumberFormat('en-IN', { style: 'currency', currency: '
 function ProductContent({ product }: { product: Product }) {
   const maximum = Math.max(0, Math.floor(product.availableQuantity))
   const [quantity, setQuantity] = useState(maximum > 0 ? 1 : 0)
+  const { addItem, cartItems, message, storageWarning } = useCart()
+  const alreadySelected = cartItems.find(item => item.productId === product.id)?.quantity ?? 0
+  const remaining = Math.max(0, maximum - alreadySelected)
   const subtotal = quantity * product.price
 
   return (
@@ -42,10 +46,21 @@ function ProductContent({ product }: { product: Product }) {
             {product.unit === 'quintal' && <p className="mt-2 text-xs text-stone-600">1 quintal = 100 kg. Quantity here is measured in quintals.</p>}
             <p className="mt-2 text-xs leading-5 text-stone-600">Product estimate only. Delivery, taxes, and other charges are not included.</p>
           </div>
-          <button type="button" disabled aria-describedby="cart-notice" className="mt-5 flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-lg bg-stone-200 px-5 py-3 font-semibold text-stone-600">
-            <ShoppingBasket className="size-5" aria-hidden="true" /> Add to Cart - Coming Soon
+          <p id="cart-notice" className="mt-4 text-sm text-stone-600">{alreadySelected} {product.unit} already in cart. {remaining} {product.unit} can still be added.</p>
+          <button type="button" disabled={remaining < 1 || quantity > remaining} aria-describedby="cart-notice"
+            onClick={() => addItem(product.id, quantity)}
+            className="button-primary mt-4 w-full disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-500">
+            <ShoppingBasket className="size-5" aria-hidden="true" /> Add to Cart
           </button>
-          <p id="cart-notice" className="mt-2 text-xs text-stone-500">Cart functionality is not implemented. No items can be added or purchased.</p>
+          {quantity > remaining && remaining > 0 && <p className="mt-2 text-sm text-amber-800">Choose {remaining} {product.unit} or fewer to stay within mock stock.</p>}
+          {remaining === 0 && <p className="mt-2 text-sm text-stone-600">No additional quantity is available for this cart.</p>}
+          <p role="status" className="mt-3 text-sm font-medium text-emerald-800">{message}</p>
+          {storageWarning && <p className="mt-2 text-xs text-amber-800">Browser storage is unavailable; cart selections may not survive refresh.</p>}
+          <div className="mt-4 flex flex-wrap gap-5 text-sm font-semibold text-emerald-800">
+            <Link to="/cart" className="underline underline-offset-4">View Cart</Link>
+            <Link to="/marketplace" className="underline underline-offset-4">Continue Shopping</Link>
+          </div>
+          <p className="mt-3 text-xs text-stone-500">Demo cart only. Adding an item does not reserve stock or place an order.</p>
         </div>
         <div className="mt-6"><SellerInfo name={product.seller} location={product.location} /></div>
       </div>

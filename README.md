@@ -1,6 +1,6 @@
 # Smart Marketplace for Farmers
 
-A marketplace for buying and selling agricultural products. Phase 1 Step 4 includes a responsive FarmMarket homepage a searchable, filterable Marketplace, and Product Details pages using demonstration product listings.
+A marketplace for buying and selling agricultural products. Phase 1 Step 5 includes a responsive FarmMarket homepage a searchable, filterable Marketplace, and Product Details pages using demonstration product listings.
 
 ## Stack
 
@@ -45,7 +45,7 @@ The homepage includes mobile navigation, category links to Marketplace, a search
 
 Product fixtures live in frontend/src/data/mockProducts.ts, with the Product contract in frontend/src/types/product.ts. Search matches product names, categories, locations, and sellers; homepage category links open the filtered Marketplace. View all products opens the Marketplace.
 
-All listings, prices, quantities, seller names, and locations are demonstration data. No account creation, login, cart, checkout, ordering, messaging, seller registration, backend, or Supabase integration is implemented. Unavailable actions are marked coming soon. Unknown routes show a minimal Not Found screen.
+All listings, prices, quantities, seller names, and locations are demonstration data. A local demonstration cart is available. No account creation, login, checkout, ordering, messaging, seller registration, backend, or Supabase integration is implemented. Unavailable actions are marked coming soon. Unknown routes show a minimal Not Found screen.
 
 Images use public Unsplash URLs and require internet access. Failed images show an accessible plant-themed fallback. External photographs are illustrative and do not verify a listed product or farm.
 
@@ -65,8 +65,23 @@ Product names on Home and Marketplace link to /products/:productId (for example 
 
 Quantity starts at 1 for available products and changes in whole listed units. Minus stops at 1; plus stops at available stock. Unavailable products show 0 with both controls disabled. The estimated product subtotal is quantity multiplied by the listed unit price, excluding delivery, taxes, and other charges. Quintal listings explain that 1 quintal equals 100 kg.
 
-The shared image fallback remains in use. Add to Cart is disabled and labelled Coming Soon; no cart state or purchases are created. Seller identities, descriptions, and stock are demonstration data with no verification or contact details.
+The shared image fallback remains in use. Add to Cart now adds the selected quantity to the local demonstration cart; checkout remains Coming Soon. Seller identities, descriptions, and stock are demonstration data with no verification or contact details.
 
 Back to Marketplace restores the originating Marketplace filters and sorting using router navigation state. Category stays in the URL. Direct product links return to the default Marketplace. Filters are not stored as account preferences or persisted across independent sessions.
 
 Manual checks: open /products/tomatoes and /products/rice, try quantity limits, use an invalid ID, and return from a filtered Marketplace listing.
+
+
+## Phase 1 Step 5: Local shopping cart
+
+Open /cart or use the navbar cart badge. Product Details adds the selected whole-unit quantity. Repeat additions merge into one row, with quantities capped at the current mock stock. The cart supports quantity changes, removal, Clear Cart, an empty state, and estimated INR subtotals. Checkout is disabled.
+
+CartProvider owns shared cart state and useCart reads it from any component. Reducer actions run against the latest state, including rapid repeated updates. QuantitySelector uses unique accessible labels for multiple cart rows.
+
+Only product IDs and quantities are saved under farmmarket.cart.v1 in browser localStorage. Refresh restores valid selections; unknown products, malformed entries, invalid quantities, and unavailable products are discarded. Duplicate saved rows are merged and stock reductions clamp quantities. Names, prices, and stock always come from current mockProducts, never saved client data. Invalid JSON or outdated shapes reset to an empty cart. Storage failures leave the in-memory cart usable and display a warning. Data is local to this browser and origin; it is not an account cart, is not synchronized between tabs, and may be cleared by the browser.
+
+The badge sums selected listed-unit counts, not a combined physical weight. Each row identifies kg or quintal units. Subtotals exclude taxes, delivery, and other fees. Nothing reserves stock or creates an order. No sensitive data is stored.
+
+Checks should cover duplicate additions, stock limits, invalid saved data, refresh, quantity changes, removal, clear/empty state, badge updates, and subtotals. Browser interaction and visual responsiveness should also be checked manually.
+
+Run automated cart checks from frontend with npm.cmd run test:cart (or npm run test:cart where npm scripts are permitted). These checks exercise reducer actions, bounds, storage validation and failure handling, totals, accessible label uniqueness, and server-rendered pages. They do not replace manual browser checks for live clicks, badge updates, real refresh persistence, image loading failures, and responsive appearance.
