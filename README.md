@@ -1,6 +1,6 @@
 # Smart Marketplace for Farmers
 
-A marketplace for buying and selling agricultural products. Phase 1 Step 5 includes a responsive FarmMarket homepage a searchable, filterable Marketplace, and Product Details pages using demonstration product listings.
+A marketplace for buying and selling agricultural products. Phase 1 Step 6 includes a responsive FarmMarket homepage a searchable, filterable Marketplace, and Product Details pages using demonstration product listings.
 
 ## Stack
 
@@ -65,7 +65,7 @@ Product names on Home and Marketplace link to /products/:productId (for example 
 
 Quantity starts at 1 for available products and changes in whole listed units. Minus stops at 1; plus stops at available stock. Unavailable products show 0 with both controls disabled. The estimated product subtotal is quantity multiplied by the listed unit price, excluding delivery, taxes, and other charges. Quintal listings explain that 1 quintal equals 100 kg.
 
-The shared image fallback remains in use. Add to Cart now adds the selected quantity to the local demonstration cart; checkout remains Coming Soon. Seller identities, descriptions, and stock are demonstration data with no verification or contact details.
+The shared image fallback remains in use. Add to Cart now adds the selected quantity to the local demonstration cart; checkout supports a demonstration review only. Seller identities, descriptions, and stock are demonstration data with no verification or contact details.
 
 Back to Marketplace restores the originating Marketplace filters and sorting using router navigation state. Category stays in the URL. Direct product links return to the default Marketplace. Filters are not stored as account preferences or persisted across independent sessions.
 
@@ -74,7 +74,7 @@ Manual checks: open /products/tomatoes and /products/rice, try quantity limits, 
 
 ## Phase 1 Step 5: Local shopping cart
 
-Open /cart or use the navbar cart badge. Product Details adds the selected whole-unit quantity. Repeat additions merge into one row, with quantities capped at the current mock stock. The cart supports quantity changes, removal, Clear Cart, an empty state, and estimated INR subtotals. Checkout is disabled.
+Open /cart or use the navbar cart badge. Product Details adds the selected whole-unit quantity. Repeat additions merge into one row, with quantities capped at the current mock stock. The cart supports quantity changes, removal, Clear Cart, an empty state, and estimated INR subtotals. Checkout opens a frontend-only delivery form and review; order placement is unavailable.
 
 CartProvider owns shared cart state and useCart reads it from any component. Reducer actions run against the latest state, including rapid repeated updates. QuantitySelector uses unique accessible labels for multiple cart rows.
 
@@ -85,3 +85,17 @@ The badge sums selected listed-unit counts, not a combined physical weight. Each
 Checks should cover duplicate additions, stock limits, invalid saved data, refresh, quantity changes, removal, clear/empty state, badge updates, and subtotals. Browser interaction and visual responsiveness should also be checked manually.
 
 Run automated cart checks from frontend with npm.cmd run test:cart (or npm run test:cart where npm scripts are permitted). These checks exercise reducer actions, bounds, storage validation and failure handling, totals, accessible label uniqueness, and server-rendered pages. They do not replace manual browser checks for live clicks, badge updates, real refresh persistence, image loading failures, and responsive appearance.
+
+
+## Phase 1 Step 6: Checkout demonstration
+
+Open /checkout from a non-empty cart. An empty cart shows a Marketplace link and no delivery form. DeliveryForm uses controlled React inputs for contact and address information. Required fields, meaningful names, 10-digit Indian mobile numbers starting with 6-9, optional email format, six-digit nonzero-leading PIN codes, and reasonable field lengths are validated locally. Whitespace is trimmed; PIN format does not prove deliverability.
+
+Review Details displays inline errors or a demonstration contact/address review. Edit Details keeps values editable. OrderSummary reads the current shared cart, groups items by existing seller name, and shows each price, quantity, unit, and estimated subtotal. It updates with cart changes; no combined shipment is assumed. Taxes, delivery, and fees remain unknown.
+
+Delivery details exist only in temporary React state. The app does not log, transmit, or save them to localStorage, sessionStorage, or any API. Reloading or leaving checkout discards them. Use sample details; browser autofill behavior is controlled by the browser. Only the pre-existing non-sensitive cart selections persist.
+
+No order placement, order ID, inventory change, cart clearing, payment, authentication, backend, or Supabase integration occurs. Order Placement Coming Soon is displayed in the review.
+
+
+Run npm run test:checkout from frontend for focused validation, required/optional field, length, whitespace, empty-cart, multi-seller/mixed-unit summary, current-cart totals, rendered errors, and privacy-related source checks. Run npm run test:cart for cart and existing-page regression checks. Manual browser verification remains for Review/Edit clicks and focus, live cart changes during review, real reload clearing delivery values, browser autofill, and responsive appearance.

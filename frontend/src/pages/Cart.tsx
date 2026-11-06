@@ -40,7 +40,7 @@ export default function Cart() {
                 <p className="mt-5 text-sm text-stone-600">Estimated product subtotal</p>
                 <p className="mt-2 text-3xl font-bold text-emerald-800">{currency.format(estimatedSubtotal)}</p>
                 <p className="mt-4 text-xs leading-6 text-stone-600">Calculated from each selected quantity and its listed unit price. Taxes, delivery charges, and other fees are not included.</p>
-                <button disabled className="mt-6 w-full cursor-not-allowed rounded-lg bg-stone-200 px-4 py-3 font-semibold text-stone-600">Checkout - Coming Soon</button>
+                <Link to="/checkout" className="button-primary mt-6 w-full">Continue to Checkout</Link>
                 <p className="mt-3 text-xs leading-5 text-stone-500">No orders or payments can be placed.</p>
               </aside>
             </div>

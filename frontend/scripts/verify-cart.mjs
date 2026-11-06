@@ -92,7 +92,7 @@ try {
   assert.equal(snapshot.estimatedSubtotal, 3 * 32 + 2 * 6800)
   assert.match(full, /Shopping Cart/)
   assert.match(full, /5 selected listed units/)
-  assert.match(full, /Checkout - Coming Soon/)
+  assert.match(full, /href="\/checkout"/)
   assert.match(full, /Fresh Red Tomatoes/)
   assert.match(full, /Premium Basmati Rice/)
   const labelIds = [...full.matchAll(/id="([^"]+)" class="text-sm font-semibold">Selected quantity/g)].map(match => match[1])
