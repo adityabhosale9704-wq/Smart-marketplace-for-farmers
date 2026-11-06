@@ -13,7 +13,7 @@ export default function Navbar() {
       <Brand />
       <nav aria-label="Main navigation" className="hidden items-center gap-7 text-sm font-semibold lg:flex">
         <NavLink to="/" end className={({ isActive }) => isActive ? "text-emerald-700" : ""}>Home</NavLink>
-        <NavLink to="/marketplace" className={({ isActive }) => isActive ? "text-emerald-700" : ""}>Marketplace</NavLink><a href="/#sell">Sell Products</a><a href="/#about">About</a>
+        <NavLink to="/marketplace" className={({ isActive }) => isActive ? "text-emerald-700" : ""}>Marketplace</NavLink><NavLink to="/seller/dashboard" className={({ isActive }) => isActive ? "text-emerald-700" : ""}>Sell Products</NavLink><a href="/#about">About</a>
       </nav>
       <div className="hidden items-center gap-4 lg:flex">
         <NavLink to="/login" className="text-sm font-semibold text-emerald-800">Login</NavLink>
@@ -28,7 +28,7 @@ export default function Navbar() {
       <button className="rounded-lg border border-stone-200 p-2 lg:hidden" aria-label={open ? 'Close navigation' : 'Open navigation'} aria-expanded={open} aria-controls="mobile-nav" onClick={() => setOpen(!open)}>{open ? <X /> : <Menu />}</button>
     </div>
     {open && <nav id="mobile-nav" aria-label="Mobile navigation" className="page-width grid gap-4 border-t border-stone-100 py-5 lg:hidden">
-      {[['Home', '/'], ['Marketplace', '/marketplace'], ['Sell Products', '/#sell'], ['About', '/#about']].map(([label, href]) => <a key={label} href={href} onClick={() => setOpen(false)}>{label}</a>)}
+      {[['Home', '/'], ['Marketplace', '/marketplace'], ['Sell Products', '/seller/dashboard'], ['About', '/#about']].map(([label, href]) => <a key={label} href={href} onClick={() => setOpen(false)}>{label}</a>)}
       <NavLink to="/login" onClick={() => setOpen(false)}>Login</NavLink>
       <NavLink to="/register" onClick={() => setOpen(false)}>Register</NavLink>
     </nav>}

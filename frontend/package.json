@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test:cart": "node scripts/verify-cart.mjs",
     "test:checkout": "node scripts/verify-checkout.mjs",
-    "test:auth": "node scripts/verify-auth.mjs"
+    "test:auth": "node scripts/verify-auth.mjs",
+    "test:seller": "node scripts/verify-seller.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.69.0",

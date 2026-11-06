@@ -1,6 +1,6 @@
 # Smart Marketplace for Farmers
 
-A marketplace for buying and selling agricultural products. Phase 1 Step 7 includes a responsive FarmMarket homepage a searchable, filterable Marketplace, and Product Details pages using demonstration product listings.
+A marketplace for buying and selling agricultural products. Phase 1 Step 8 includes a responsive FarmMarket homepage a searchable, filterable Marketplace, and Product Details pages using demonstration product listings.
 
 ## Stack
 
@@ -115,3 +115,17 @@ Real account creation, login, reset email delivery, Supabase Auth, JWT verificat
 
 
 Run npm run test:auth from frontend for validation, error-focus helper, page rendering, password accessibility defaults, demo notices, privacy-related source checks, and existing-page rendering. Run npm run test:cart and npm run test:checkout for regressions. Manual browser checks remain for valid/invalid form submissions, neutral notices, show/hide interactions, keyboard focus, mobile navigation/layout, and page-leave/reset behavior.
+
+
+## Phase 1 Step 8: Public seller dashboard preview
+
+Open /seller/dashboard or choose Sell Products in the Navbar. No login is required for this demonstration preview and no user is treated as authenticated. One future farmer account will support both buying and selling.
+
+Separate typed mockSellerData describes five fictional listings from a single demonstration farm and four SAMPLE orders. It does not assign Marketplace products to that farm. Dashboard counts derive from these arrays: 5 products, 3 active in-stock listings, 1 zero-stock listing, and 2 incoming (Pending/Confirmed) sample orders. Demonstration sales value is INR 1,560, computed only from Completed sample orders using listed unit prices; it is not real revenue and excludes delivery/fees.
+
+Recent Products shows category, unit price, stock, and Active/Draft/Out of stock status. Recent Orders resolves product references and calculates illustrative amounts. Stock overview compares quantities with per-listing thresholds in their own units, including low-stock onions and zero-stock wheat. No inventory is changed or quantities combined across units.
+
+Seller navigation is collapsible, with disabled Coming Soon entries for Add Product, My Products, and Seller Orders. Add New Product is also disabled. No management pages, order processing, data persistence, backend, Supabase, authentication, sessions, or ownership enforcement are implemented. Real integration must identify the farmer and enforce authorization and ownership on the Express backend.
+
+
+Run npm run test:seller from frontend for dashboard rendering, route/navigation destinations, derived statistics, low/zero stock, missing product references, empty datasets, and existing-page rendering. npm run test:auth, npm run test:cart, and npm run test:checkout remain regression checks. Manual visual checks remain for sidebar collapse, mobile/desktop appearance, keyboard use, navigation clicks, and overflow.
