@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { Package, CircleCheck, PackageX, ClipboardList, IndianRupee, PackagePlus, TriangleAlert } from 'lucide-react'
 import Navbar from '../../components/Navbar'
 import Footer from '../../components/Footer'
@@ -25,7 +26,7 @@ export default function SellerDashboard() {
             <div className="min-w-0 space-y-7">
               <header className="flex flex-wrap items-start justify-between gap-5">
                 <div className="max-w-xl"><p className="eyebrow">GROW YOUR POSSIBILITIES</p><h1 className="mt-3 text-3xl font-bold tracking-tight text-emerald-950">Welcome to your seller preview</h1><p className="mt-4 text-sm leading-7 text-stone-600">Explore how a future dashboard could bring your products, incoming orders, and stock together. One farmer account will support both buying and selling.</p></div>
-                <button disabled className="flex cursor-not-allowed items-center gap-2 rounded-lg bg-stone-200 px-4 py-3 text-sm font-semibold text-stone-600"><PackagePlus aria-hidden="true" className="size-4" /><span>Add New Product<span className="block text-xs font-normal">Coming Soon</span></span></button>
+                <Link to="/seller/add-product" className="button-primary"><PackagePlus aria-hidden="true" className="size-4" />Add New Product</Link>
               </header>
               <section aria-label="Demonstration statistics" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 <StatCard label="Total Products" value={stats.totalProducts} explanation="All sample listings, including drafts." icon={Package} />

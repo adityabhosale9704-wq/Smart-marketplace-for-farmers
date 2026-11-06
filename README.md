@@ -1,6 +1,6 @@
 # Smart Marketplace for Farmers
 
-A marketplace for buying and selling agricultural products. Phase 1 Step 8 includes a responsive FarmMarket homepage a searchable, filterable Marketplace, and Product Details pages using demonstration product listings.
+A marketplace for buying and selling agricultural products. Phase 1 Step 9 includes a responsive FarmMarket homepage a searchable, filterable Marketplace, and Product Details pages using demonstration product listings.
 
 ## Stack
 
@@ -125,7 +125,20 @@ Separate typed mockSellerData describes five fictional listings from a single de
 
 Recent Products shows category, unit price, stock, and Active/Draft/Out of stock status. Recent Orders resolves product references and calculates illustrative amounts. Stock overview compares quantities with per-listing thresholds in their own units, including low-stock onions and zero-stock wheat. No inventory is changed or quantities combined across units.
 
-Seller navigation is collapsible, with disabled Coming Soon entries for Add Product, My Products, and Seller Orders. Add New Product is also disabled. No management pages, order processing, data persistence, backend, Supabase, authentication, sessions, or ownership enforcement are implemented. Real integration must identify the farmer and enforce authorization and ownership on the Express backend.
+Seller navigation is collapsible, with an Add Product preview form and disabled Coming Soon entries for My Products and Seller Orders. No management pages, order processing, data persistence, backend, Supabase, authentication, sessions, or ownership enforcement are implemented. Real integration must identify the farmer and enforce authorization and ownership on the Express backend.
 
 
 Run npm run test:seller from frontend for dashboard rendering, route/navigation destinations, derived statistics, low/zero stock, missing product references, empty datasets, and existing-page rendering. npm run test:auth, npm run test:cart, and npm run test:checkout remain regression checks. Manual visual checks remain for sidebar collapse, mobile/desktop appearance, keyboard use, navigation clicks, and overflow.
+
+
+## Phase 1 Step 9: Add Product demonstration
+
+/seller/add-product opens from the dashboard and seller sidebar. ProductForm uses existing categories and Product unit types (kg and quintal); no tonne unit is introduced into existing purchase/cart behavior. Fields cover name, description, category, unit, INR price, available stock, city, district, state, optional harvest date, and optional local image.
+
+Validation requires a positive price, nonnegative stock, at most two decimal places, and numeric values no greater than 1,000,000. Exponent notation, NaN, Infinity, negatives, and excessive precision are rejected. Product name is 3-100 characters; description is 20-2000 characters. Locations require readable place names; no GPS or delivery-coverage claim is made. Harvest dates must be real dates from 1900 through the current date in Asia/Kolkata. Stock is available listing quantity, not an order quantity.
+
+JPG, PNG, and WebP images up to 5 MB are decoded locally to detect corrupt files. Images can be replaced or removed. Blob URLs are revoked on replacement, removal, failed/stale decoding, and leaving the page. The accepted image survives switching between form and preview, but nothing is uploaded or stored in localStorage.
+
+Preview Product validates the form and shows an editable review: Demonstration preview only. The product has not been saved or published. No product ID, seller identity, mock catalogue insertion, inventory update, account, or backend request is created. Form state and images disappear when the page is left or reloaded.
+
+Run npm run test:product-form from frontend for focused form validation/rendering, image MIME/size restrictions, preview content, edit handler, and privacy-related source checks. Real file decoding and object-URL lifecycle, Preview/Edit interaction, focus, and responsive appearance still require manual browser testing.

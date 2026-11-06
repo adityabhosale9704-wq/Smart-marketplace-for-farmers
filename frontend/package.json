@@ -11,7 +11,8 @@
     "test:cart": "node scripts/verify-cart.mjs",
     "test:checkout": "node scripts/verify-checkout.mjs",
     "test:auth": "node scripts/verify-auth.mjs",
-    "test:seller": "node scripts/verify-seller.mjs"
+    "test:seller": "node scripts/verify-seller.mjs",
+    "test:product-form": "node scripts/verify-product-form.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.69.0",
