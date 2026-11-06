@@ -1,6 +1,6 @@
 # Smart Marketplace for Farmers
 
-A marketplace for buying and selling agricultural products. Phase 1 Step 9 includes a responsive FarmMarket homepage a searchable, filterable Marketplace, and Product Details pages using demonstration product listings.
+A marketplace for buying and selling agricultural products. Phase 1 Step 10 includes a responsive FarmMarket homepage a searchable, filterable Marketplace, and Product Details pages using demonstration product listings.
 
 ## Stack
 
@@ -125,7 +125,7 @@ Separate typed mockSellerData describes five fictional listings from a single de
 
 Recent Products shows category, unit price, stock, and Active/Draft/Out of stock status. Recent Orders resolves product references and calculates illustrative amounts. Stock overview compares quantities with per-listing thresholds in their own units, including low-stock onions and zero-stock wheat. No inventory is changed or quantities combined across units.
 
-Seller navigation is collapsible, with an Add Product preview form and disabled Coming Soon entries for My Products and Seller Orders. No management pages, order processing, data persistence, backend, Supabase, authentication, sessions, or ownership enforcement are implemented. Real integration must identify the farmer and enforce authorization and ownership on the Express backend.
+Seller navigation is collapsible, with an Add Product preview form and My Products navigation and a disabled Coming Soon entry for Seller Orders. No management pages, order processing, data persistence, backend, Supabase, authentication, sessions, or ownership enforcement are implemented. Real integration must identify the farmer and enforce authorization and ownership on the Express backend.
 
 
 Run npm run test:seller from frontend for dashboard rendering, route/navigation destinations, derived statistics, low/zero stock, missing product references, empty datasets, and existing-page rendering. npm run test:auth, npm run test:cart, and npm run test:checkout remain regression checks. Manual visual checks remain for sidebar collapse, mobile/desktop appearance, keyboard use, navigation clicks, and overflow.
@@ -142,3 +142,16 @@ JPG, PNG, and WebP images up to 5 MB are decoded locally to detect corrupt files
 Preview Product validates the form and shows an editable review: Demonstration preview only. The product has not been saved or published. No product ID, seller identity, mock catalogue insertion, inventory update, account, or backend request is created. Form state and images disappear when the page is left or reloaded.
 
 Run npm run test:product-form from frontend for focused form validation/rendering, image MIME/size restrictions, preview content, edit handler, and privacy-related source checks. Real file decoding and object-URL lifecycle, Preview/Edit interaction, focus, and responsive appearance still require manual browser testing.
+
+
+## Phase 1 Step 10: My Products demonstration
+
+Open /seller/products from the seller sidebar. My Products clones the existing fictional seller listings into temporary page state. It is independent of buyer Marketplace mockProducts and unsaved Add Product previews. Leaving or refreshing resets edits; the dashboard continues to show the original sample data.
+
+Search ignores case, surrounding whitespace, and repeated spaces. Combine name search with existing category and listing-status filters; Clear Filters resets all three. Statistics count all current page listings, not just filtered results, and update after edits.
+
+View / Edit opens an inline, keyboard-accessible editor. Edit name, positive INR unit price, nonnegative stock, and demonstration status. Price/stock support two decimals and a maximum of 1,000,000. Units and IDs cannot be changed. Active requires positive stock; Out of Stock requires zero stock; Draft supports either. Draft takes precedence over stock for listing status; zero/low stock warnings still reflect quantity. Shared status calculations/badges keep recent dashboard products and management consistent.
+
+Apply Demo Changes changes only this page and explicitly says nothing was saved or published. Filters remain active, so an edited row may disappear from results. Cancel or Escape closes the editor without applying changes. No deletion, publishing, inventory API, backend persistence, authentication, or ownership checks are implemented.
+
+Run npm run test:my-products from frontend for filtering, validation, stock/status consistency, updated counts, immutable source data/units, empty results, and page/editor rendering. Manual checks remain for actual editing, cancel/Escape, focus, filter/reset controls, live statistics, and mobile/desktop appearance.

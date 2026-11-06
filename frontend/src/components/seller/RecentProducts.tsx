@@ -1,3 +1,4 @@
+import ProductStatusBadge from './ProductStatusBadge'
 import type { SellerListingSummary } from '../../types/seller'
 
 const currency = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 })
@@ -12,7 +13,7 @@ export default function RecentProducts({ listings = [] }: { listings?: SellerLis
           {listings.slice(0, 5).map(listing => (
             <li key={listing.id} className="grid min-w-0 gap-3 py-4 sm:grid-cols-[minmax(0,1fr)_auto]">
               <div><h3 className="font-semibold">{listing.name}</h3><p className="mt-1 text-xs text-stone-500 capitalize">{listing.category} - {currency.format(listing.price)} / {listing.unit}</p><p className="mt-2 text-sm text-stone-600">{listing.availableQuantity} {listing.unit} sample stock</p></div>
-              <span className={`h-fit w-fit rounded-full px-3 py-1 text-xs font-semibold ${!listing.published ? 'bg-stone-100 text-stone-600' : listing.availableQuantity === 0 ? 'bg-red-50 text-red-800' : 'bg-emerald-50 text-emerald-800'}`}>{!listing.published ? 'Draft' : listing.availableQuantity === 0 ? 'Out of stock' : 'Active'}</span>
+              <ProductStatusBadge listing={listing} />
             </li>
           ))}
         </ul>

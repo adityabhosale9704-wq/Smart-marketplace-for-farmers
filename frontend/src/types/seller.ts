@@ -25,3 +25,28 @@ export interface DashboardStatistics {
   incomingOrders: number
   demonstrationSalesValue: number
 }
+
+
+export type SellerProductStatus = 'Active' | 'Draft' | 'Out of Stock'
+
+export interface SellerProductFilters {
+  search: string
+  category: SellerListingSummary['category'] | ''
+  status: SellerProductStatus | ''
+}
+
+export interface SellerProductEditValues {
+  name: string
+  price: string
+  stock: string
+  status: SellerProductStatus
+}
+
+export type SellerProductEditErrors = Partial<Record<keyof SellerProductEditValues, string>>
+
+export interface SellerListingCounts {
+  total: number
+  active: number
+  draft: number
+  outOfStock: number
+}

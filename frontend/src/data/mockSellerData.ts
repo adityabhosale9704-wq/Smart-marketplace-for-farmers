@@ -1,3 +1,4 @@
+import { sellerListingCounts } from '../utils/sellerProductUtils'
 import type { DashboardStatistics, DemoSellerOrder, SellerListingSummary } from '../types/seller'
 
 // An isolated fictional farm catalogue, not ownership of Marketplace listings.
@@ -18,11 +19,12 @@ export const mockSellerOrders: DemoSellerOrder[] = [
 
 // All statistics are derived. Missing product references are excluded from order figures.
 export function deriveSellerStatistics(listings: SellerListingSummary[] = [], orders: DemoSellerOrder[] = []): DashboardStatistics {
+  const counts = sellerListingCounts(listings)
   const validOrders = orders.filter(order => listings.some(listing => listing.id === order.listingId))
   return {
-    totalProducts: listings.length,
-    activeListings: listings.filter(listing => listing.published && listing.availableQuantity > 0).length,
-    outOfStockProducts: listings.filter(listing => listing.availableQuantity === 0).length,
+    totalProducts: counts.total,
+    activeListings: counts.active,
+    outOfStockProducts: counts.outOfStock,
     incomingOrders: validOrders.filter(order => order.status === 'Pending' || order.status === 'Confirmed').length,
     demonstrationSalesValue: validOrders.reduce((sum, order) => {
       const listing = listings.find(item => item.id === order.listingId)
