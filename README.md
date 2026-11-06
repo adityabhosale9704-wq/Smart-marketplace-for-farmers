@@ -1,6 +1,6 @@
 # Smart Marketplace for Farmers
 
-A marketplace for buying and selling agricultural products. Phase 1 Step 6 includes a responsive FarmMarket homepage a searchable, filterable Marketplace, and Product Details pages using demonstration product listings.
+A marketplace for buying and selling agricultural products. Phase 1 Step 7 includes a responsive FarmMarket homepage a searchable, filterable Marketplace, and Product Details pages using demonstration product listings.
 
 ## Stack
 
@@ -99,3 +99,19 @@ No order placement, order ID, inventory change, cart clearing, payment, authenti
 
 
 Run npm run test:checkout from frontend for focused validation, required/optional field, length, whitespace, empty-cart, multi-seller/mixed-unit summary, current-cart totals, rendered errors, and privacy-related source checks. Run npm run test:cart for cart and existing-page regression checks. Manual browser verification remains for Review/Edit clicks and focus, live cart changes during review, real reload clearing delivery values, browser autofill, and responsive appearance.
+
+
+## Phase 1 Step 7: Authentication UI only
+
+Routes /login, /register, and /forgot-password provide controlled forms in a shared FarmMarket layout. Navbar links now open these pages. A future farmer account supports both buying and selling, with no permanent Buyer/Seller role choice.
+
+Auth validation checks required fields, reasonable names and lengths, email format, Indian 10-digit mobile numbers starting with 6-9, 12-128 character demo passwords, registration letter/number requirements, exact password confirmation, and a clearly marked demonstration acknowledgement. Passwords are not trimmed or altered. Frontend validation does not establish password security or authenticate anyone.
+
+Password visibility toggles are keyboard-accessible and do not submit the form. Remember email is UI-only and saves nothing. The acknowledgement is not real terms acceptance. Valid submissions show neutral messages: login is not connected, no account was created, and no reset email was sent.
+
+Form values remain in temporary component state. The app does not store, log, or transmit passwords or registration information. Leaving/reloading a page discards app form state; browser autofill/password-manager behavior is controlled by the user/browser. Use sample information and never a real password in these demo forms.
+
+Real account creation, login, reset email delivery, Supabase Auth, JWT verification, authorization, protected pages, backend, and database work remain deferred. No fake users, sessions, tokens, or social-login buttons are created.
+
+
+Run npm run test:auth from frontend for validation, error-focus helper, page rendering, password accessibility defaults, demo notices, privacy-related source checks, and existing-page rendering. Run npm run test:cart and npm run test:checkout for regressions. Manual browser checks remain for valid/invalid form submissions, neutral notices, show/hide interactions, keyboard focus, mobile navigation/layout, and page-leave/reset behavior.

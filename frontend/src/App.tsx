@@ -2,6 +2,9 @@ import { BrowserRouter, Link, Route, Routes } from 'react-router-dom'
 import CartProvider from './context/CartContext'
 import Cart from './pages/Cart'
 import Checkout from './pages/Checkout'
+import Login from './pages/Login'
+import Register from './pages/Register'
+import ForgotPassword from './pages/ForgotPassword'
 import Home from './pages/Home'
 import Marketplace from './pages/Marketplace'
 import ProductDetails from './pages/ProductDetails'
@@ -10,6 +13,9 @@ export default function App() {
   return <CartProvider><BrowserRouter><Routes>
     <Route path="/" element={<Home />} />
     <Route path="/marketplace" element={<Marketplace />} />
+    <Route path="/login" element={<Login />} />
+    <Route path="/register" element={<Register />} />
+    <Route path="/forgot-password" element={<ForgotPassword />} />
     <Route path="/checkout" element={<Checkout />} />
     <Route path="/cart" element={<Cart />} />
     <Route path="/products/:productId" element={<ProductDetails />} />

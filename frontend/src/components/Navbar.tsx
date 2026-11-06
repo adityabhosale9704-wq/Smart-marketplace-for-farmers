@@ -16,8 +16,8 @@ export default function Navbar() {
         <NavLink to="/marketplace" className={({ isActive }) => isActive ? "text-emerald-700" : ""}>Marketplace</NavLink><a href="/#sell">Sell Products</a><a href="/#about">About</a>
       </nav>
       <div className="hidden items-center gap-4 lg:flex">
-        <button disabled className="coming-soon">Login <span className="block text-xs font-normal">Coming soon</span></button>
-        <button disabled className="rounded-lg bg-stone-100 px-4 py-2 text-sm text-stone-500">Register <span className="block text-xs">Coming soon</span></button>
+        <NavLink to="/login" className="text-sm font-semibold text-emerald-800">Login</NavLink>
+        <NavLink to="/register" className="button-primary">Register</NavLink>
 
       </div>
       <NavLink to="/cart" aria-label={`Shopping cart, ${totalItemCount} selected listed units, not combined weight`} className="ml-auto flex shrink-0 items-center gap-1 rounded-lg border border-stone-200 px-2 py-2 text-emerald-900 lg:ml-0">
@@ -29,7 +29,8 @@ export default function Navbar() {
     </div>
     {open && <nav id="mobile-nav" aria-label="Mobile navigation" className="page-width grid gap-4 border-t border-stone-100 py-5 lg:hidden">
       {[['Home', '/'], ['Marketplace', '/marketplace'], ['Sell Products', '/#sell'], ['About', '/#about']].map(([label, href]) => <a key={label} href={href} onClick={() => setOpen(false)}>{label}</a>)}
-      <p className="text-sm text-stone-500">Login and registration - coming soon</p>
+      <NavLink to="/login" onClick={() => setOpen(false)}>Login</NavLink>
+      <NavLink to="/register" onClick={() => setOpen(false)}>Register</NavLink>
     </nav>}
   </header>
 }
