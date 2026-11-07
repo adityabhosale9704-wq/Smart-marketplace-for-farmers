@@ -1,7 +1,7 @@
 import { useCart } from '../hooks/useCart'
 import { NavLink } from 'react-router-dom'
 import { useState } from 'react'
-import { Menu, ShoppingBasket, X } from 'lucide-react'
+import { Menu, ShoppingBasket, UserRound, X } from 'lucide-react'
 import Brand from './Brand'
 
 export default function Navbar() {
@@ -21,7 +21,8 @@ export default function Navbar() {
         <NavLink to="/register" className="button-primary">Register</NavLink>
 
       </div>
-      <NavLink to="/cart" aria-label={`Shopping cart, ${totalItemCount} selected listed units, not combined weight`} className="ml-auto flex shrink-0 items-center gap-1 rounded-lg border border-stone-200 px-2 py-2 text-emerald-900 lg:ml-0">
+      <NavLink to="/profile" title="Profile - public demonstration preview" aria-label="Profile (Demo) - public preview" className="ml-auto flex shrink-0 flex-col items-center rounded-lg border border-stone-200 p-2 text-emerald-900 lg:ml-0"><UserRound aria-hidden="true" className="size-5" /><span className="mt-0.5 text-[10px]">Demo</span></NavLink>
+      <NavLink to="/cart" aria-label={`Shopping cart, ${totalItemCount} selected listed units, not combined weight`} className="flex shrink-0 items-center gap-1 rounded-lg border border-stone-200 px-2 py-2 text-emerald-900 lg:ml-0">
         <ShoppingBasket aria-hidden="true" className="size-5" />
         <span aria-hidden="true" className="rounded-full bg-emerald-700 px-2 py-0.5 text-xs font-bold text-white">{totalItemCount}</span>
         <span className="sr-only">Selected listed units</span>
@@ -29,7 +30,7 @@ export default function Navbar() {
       <button className="rounded-lg border border-stone-200 p-2 lg:hidden" aria-label={open ? 'Close navigation' : 'Open navigation'} aria-expanded={open} aria-controls="mobile-nav" onClick={() => setOpen(!open)}>{open ? <X /> : <Menu />}</button>
     </div>
     {open && <nav id="mobile-nav" aria-label="Mobile navigation" className="page-width grid gap-4 border-t border-stone-100 py-5 lg:hidden">
-      {[['Home', '/'], ['Marketplace', '/marketplace'], ['Sell Products', '/seller/dashboard'], ['About', '/#about'], ['My Orders (Demo)', '/my-orders']].map(([label, href]) => <a key={label} href={href} onClick={() => setOpen(false)}>{label}</a>)}
+      {[['Home', '/'], ['Marketplace', '/marketplace'], ['Sell Products', '/seller/dashboard'], ['About', '/#about'], ['My Orders (Demo)', '/my-orders'], ['Profile (Demo)', '/profile']].map(([label, href]) => <a key={label} href={href} onClick={() => setOpen(false)}>{label}</a>)}
       <NavLink to="/login" onClick={() => setOpen(false)}>Login</NavLink>
       <NavLink to="/register" onClick={() => setOpen(false)}>Register</NavLink>
     </nav>}

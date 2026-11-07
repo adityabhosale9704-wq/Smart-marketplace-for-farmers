@@ -7,6 +7,7 @@ import Register from './pages/Register'
 import ForgotPassword from './pages/ForgotPassword'
 import Home from './pages/Home'
 import MyOrders from './pages/MyOrders'
+import Profile from './pages/Profile'
 import SellerDashboard from './pages/seller/SellerDashboard'
 import AddProduct from './pages/seller/AddProduct'
 import MyProducts from './pages/seller/MyProducts'
@@ -17,6 +18,7 @@ import ProductDetails from './pages/ProductDetails'
 export default function App() {
   return <CartProvider><BrowserRouter><Routes>
     <Route path="/" element={<Home />} />
+    <Route path="/profile" element={<Profile />} />
     <Route path="/my-orders" element={<MyOrders />} />
     <Route path="/marketplace" element={<Marketplace />} />
     <Route path="/seller/orders" element={<SellerOrders />} />

@@ -15,7 +15,8 @@
     "test:product-form": "node scripts/verify-product-form.mjs",
     "test:my-products": "node scripts/verify-my-products.mjs",
     "test:seller-orders": "node scripts/verify-seller-orders.mjs",
-    "test:buyer-orders": "node scripts/verify-buyer-orders.mjs"
+    "test:buyer-orders": "node scripts/verify-buyer-orders.mjs",
+    "test:profile": "node scripts/verify-profile.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.69.0",

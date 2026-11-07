@@ -1,6 +1,6 @@
 # Smart Marketplace for Farmers
 
-A marketplace for buying and selling agricultural products. Phase 1 Step 12 includes a responsive FarmMarket homepage a searchable, filterable Marketplace, and Product Details pages using demonstration product listings.
+A marketplace for buying and selling agricultural products. Phase 1 Step 13 includes a responsive FarmMarket homepage a searchable, filterable Marketplace, and Product Details pages using demonstration product listings.
 
 ## Stack
 
@@ -187,3 +187,18 @@ OrderProgress shows only the sample status vocabulary and marks the current exam
 No history records or statuses are editable here. No order creation, authentication, persistent history, database, tracking, inventory, payment, backend, or Supabase integration is implemented. One future farmer account supports both roles. Future Express APIs must enforce buyer and seller ownership; frontend filtering is not security.
 
 Run npm run test:buyer-orders from frontend for fixtures, isolation, search/status filters, empty/not-found states, details/units, mixed statuses, progress, and calculations. Existing scripts remain regression checks. Manual checks remain for actual filter/reset/detail interactions, keyboard/focus, browser Back/Forward, responsive appearance, and reload behavior.
+
+
+## Phase 1 Step 13: Public farmer profile preview
+
+/profile is accessible through the Profile (Demo) navbar icon and mobile link. It shows a fictional Sample Farmer profile with farmer@example.com, a sample village/district, Maharashtra, a format-only PIN, and a masked 9XXXXXXXXX mobile placeholder. No real phone number is seeded; the optional editable mobile field starts blank. No authenticated user ID or session is represented.
+
+Edit Profile opens a separate controlled draft. Validation checks required names/email/locations/PIN, reasonable lengths, optional Indian 10-digit mobile format, email format, and a six-digit nonzero-leading PIN. Name and location whitespace is normalized. These checks do not establish identity, phone/address ownership, or deliverability.
+
+Save Demo Changes updates the displayed React state and says: Demo profile updated on this page only. No account information was saved. Cancel or Escape discards the draft without changing displayed values. Reopening the form starts from the current displayed profile; leaving/reloading restores the original fixture.
+
+Buying links open Marketplace, Cart, and My Orders. Selling links open Seller Dashboard, Add Product, My Products, and Seller Orders. This is one future farmer account, without role selection or separate buyer/seller accounts. Change Password, Account Security, and Logout remain disabled Coming Soon placeholders. Login/Register remain visible; no logged-in menu, verified badge, or fake logout is introduced.
+
+Profile values stay in component memory only. The app does not log, transmit, or store them in browser storage/cookies, database, or external services. Use fictional details. Browser autofill/password-manager behavior is controlled by the user/browser, not app persistence. Future Supabase Auth must supply the real identity, Express must verify JWTs and ownership/permissions, and PostgreSQL must store profiles linked to the authenticated identity. None are integrated here.
+
+Run npm run test:profile from frontend for fixtures, validation, normalization, immutable state values, rendered form/card, navigation links, disabled settings, and privacy-related source checks. Existing verification scripts remain regression checks. Manual testing remains for actual Edit/Save/Cancel/Escape, inline errors/focus, card updates, reload reset, responsive appearance, and autofill.
