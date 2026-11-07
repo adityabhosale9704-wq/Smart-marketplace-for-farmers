@@ -1,6 +1,6 @@
 # Smart Marketplace for Farmers
 
-A marketplace for buying and selling agricultural products. Phase 1 Step 11 includes a responsive FarmMarket homepage a searchable, filterable Marketplace, and Product Details pages using demonstration product listings.
+A marketplace for buying and selling agricultural products. Phase 1 Step 12 includes a responsive FarmMarket homepage a searchable, filterable Marketplace, and Product Details pages using demonstration product listings.
 
 ## Stack
 
@@ -170,3 +170,20 @@ View Details opens an inline accessible panel with Close Details and Escape supp
 Changes exist only on Seller Orders and reset when leaving/reloading. Dashboard figures remain the original seeded examples. Nothing is saved, cancelled, fulfilled, deducted from inventory, charged, sent, or notified outside this temporary UI. One future farmer account supports both buying and selling. Real Express endpoints must verify identity, ownership, and transitions.
 
 Run npm run test:seller-orders from frontend for fixtures, filtering, calculations, transitions, counts, details rendering, and source-data isolation. Existing test scripts remain regression checks. Manual browser verification remains for live interactions, keyboard/focus behavior, responsive presentation, and real refresh reset.
+
+
+## Phase 1 Step 12: My Orders / buyer history preview
+
+/my-orders is a public, unauthenticated demonstration linked from desktop and mobile Navbar as My Orders (Demo). Seven separate SAMPLE-BUY records are fictional fixtures, not purchases created by Checkout, the cart, or seller status updates. No contact details, private addresses, payment confirmations, shipment dates, or tracking numbers are included.
+
+BuyerOrder groups snapshots into seller fulfillments. Product references and units follow the existing Product type; seller statuses reuse the existing Pending/Confirmed/Completed/Cancelled vocabulary. Two examples contain separate fictional growers with different statuses. Mixed is an overall summary only; each seller retains its individual state. Uniform-status filters match purchases where every seller has that status; Mixed matches different seller statuses.
+
+Totals derive from quantity times unit price, rounded to paise, summed across lines and sellers. Each quantity retains kg or quintal units; no combined weight or final payable total is shown. Shipping, taxes, and additional fees are unknown. Initial counts: 7 total, 3 with at least one Pending/Confirmed seller, and 2 with every seller Completed. Cancelled and Mixed terminal examples mean these statistics are not a complete partition of total orders.
+
+Search matches reference, product, or fictional grower name, ignoring case and unnecessary whitespace. Clear Filters resets search/status. View Details uses /my-orders?order=SAMPLE-BUY-004 so Back/Forward and direct preview links work. Invalid or blank order references display a useful not-found state; no seed orders produces an empty state. Close Details and Escape remove the reference and return focus where practical.
+
+OrderProgress shows only the sample status vocabulary and marks the current example step; other steps are explicitly path illustrations, not confirmed past/future events. Cancelled shows a separate message without a successful-completion path. Multi-seller progress is displayed separately.
+
+No history records or statuses are editable here. No order creation, authentication, persistent history, database, tracking, inventory, payment, backend, or Supabase integration is implemented. One future farmer account supports both roles. Future Express APIs must enforce buyer and seller ownership; frontend filtering is not security.
+
+Run npm run test:buyer-orders from frontend for fixtures, isolation, search/status filters, empty/not-found states, details/units, mixed statuses, progress, and calculations. Existing scripts remain regression checks. Manual checks remain for actual filter/reset/detail interactions, keyboard/focus, browser Back/Forward, responsive appearance, and reload behavior.
