@@ -36,7 +36,7 @@ export default function DeliveryForm({ details, errors, onChange, onReview }: De
     <form noValidate onSubmit={onReview} className="rounded-2xl border border-stone-200 bg-white p-5 sm:p-7">
       <h2 className="text-xl font-bold text-emerald-950">Contact & delivery details</h2>
       <p className="mt-3 text-sm leading-6 text-stone-600">Use sample details for this demonstration. Required fields are marked *. Nothing is sent or saved by this app.</p>
-      {Object.keys(errors).length > 0 && <div role="alert" tabIndex={-1} id="checkout-errors" className="mt-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">Please correct the highlighted fields before reviewing your details.</div>}
+      {Object.values(errors).some(Boolean) && <div role="alert" tabIndex={-1} id="checkout-errors" className="mt-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">Please correct the highlighted fields before reviewing your details.</div>}
       <div className="mt-6 grid gap-5 sm:grid-cols-2">
         {fields.map(field => {
           const id = `${prefix}-${field.name}`

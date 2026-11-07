@@ -12,6 +12,20 @@ try {
   const { cartReducer, validateSelections } = await load('utils/cart.ts')
   const { readCart, writeCart, CART_STORAGE_KEY } = await load('utils/cartStorage.ts')
   const { mockProducts } = await load('data/mockProducts.ts')
+  const { readProductNavigationState, emptyFilters, filterProducts } = await load('services/filterProducts.ts')
+  const navigation = { returnTo: '/marketplace?category=fruits', filters: { ...emptyFilters }, sort: 'name-asc' }
+  assert.deepEqual(readProductNavigationState(navigation), navigation)
+  for (const value of [null, 4, {}, { ...navigation, returnTo: 4 },
+    { ...navigation, returnTo: '/marketplace-invalid' }, { ...navigation, sort: 'unknown' },
+    { ...navigation, filters: { ...emptyFilters, search: 4 } },
+    { ...navigation, filters: { ...emptyFilters, category: 'invalid' } }]) {
+    assert.equal(readProductNavigationState(value), null)
+  }
+  const matches = filterProducts(mockProducts, { ...emptyFilters, search: '  TOMATOES  ' }, 'name-asc')
+  assert.ok(matches.length > 0)
+  assert.ok(matches.every(product => product.name.toLowerCase().includes('tomatoes')))
+  assert.deepEqual(filterProducts(mockProducts, { ...emptyFilters, minPrice: '100', maxPrice: '10' }, 'name-asc'), [])
+
   const { default: Provider } = await load('context/CartContext.tsx')
   const { useCart } = await load('hooks/useCart.ts')
   const { default: Cart } = await load('pages/Cart.tsx')
@@ -105,6 +119,9 @@ try {
       createElement(Routes, null, createElement(Route, { path: '/products/:productId', element: createElement(Details) })))))
   assert.match(renderDetails('/products/tomatoes'), /Add to Cart/)
   assert.match(renderDetails('/products/invalid'), /Product Not Found/)
+  assert.match(render(Marketplace, { pathname: '/marketplace', state: { filters: { search: 42 } } }), /Explore the marketplace/)
+  assert.match(renderDetails({ pathname: '/products/tomatoes', state: { returnTo: 42 } }), /Add to Cart/)
+
   memory.clear()
   assert.match(render(Cart, '/cart'), /Your cart is empty/)
   assert.equal(snapshot.totalItemCount, 0)

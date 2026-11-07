@@ -7,15 +7,14 @@ import ProductCard from '../components/ProductCard'
 import FilterPanel from '../components/FilterPanel'
 import { mockProducts } from '../data/mockProducts'
 import { parseCategory } from '../data/categories'
-import { emptyFilters, filterProducts, priceRangeError } from '../services/filterProducts'
-import type { ProductNavigationState } from '../types/productNavigation'
+import { emptyFilters, filterProducts, priceRangeError, readProductNavigationState } from '../services/filterProducts'
 import type { ProductFilters, SortOrder } from '../services/filterProducts'
 
 const locations = [...new Set(mockProducts.map(product => product.location))].sort()
 
 export default function Marketplace() {
   const location = useLocation()
-  const saved = location.state as ProductNavigationState | null
+  const saved = readProductNavigationState(location.state)
   const [searchParams, setSearchParams] = useSearchParams()
   const [localFilters, setLocalFilters] = useState<ProductFilters>(() => saved?.filters ?? emptyFilters)
   const [sort, setSort] = useState<SortOrder>(() => saved?.sort ?? 'name-asc')

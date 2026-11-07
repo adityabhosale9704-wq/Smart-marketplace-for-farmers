@@ -52,6 +52,8 @@ try {
   assert.match(validForm, /name="city"/)
   assert.match(validForm, /value="Pune"/)
   assert.match(validForm, /type="submit"/)
+  const correctedForm = renderToStaticMarkup(createElement(DeliveryForm, { details: valid, errors: { mobile: undefined }, onChange() {}, onReview() {} }))
+  assert.ok(!correctedForm.includes('id="checkout-errors"'))
   const errors = validateDeliveryDetails(emptyDeliveryDetails).errors
   const invalidForm = renderToStaticMarkup(createElement(DeliveryForm, { details: emptyDeliveryDetails, errors, onChange() {}, onReview() {} }))
   assert.match(invalidForm, /role="alert"/)

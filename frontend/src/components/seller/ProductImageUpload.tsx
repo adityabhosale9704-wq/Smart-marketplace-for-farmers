@@ -29,9 +29,10 @@ export default function ProductImageUpload({ image, error, busy, onChange, onBus
     const validationError = validateProductImage(file)
     if (validationError) { onBusy(false); onChange(null, validationError); return }
     onBusy(true)
-    const url = URL.createObjectURL(file)
-    pendingUrl.current = url
+    let url: string | undefined
     try {
+      url = URL.createObjectURL(file)
+      pendingUrl.current = url
       const picture = new Image()
       picture.src = url
       await picture.decode()
@@ -42,7 +43,7 @@ export default function ProductImageUpload({ image, error, busy, onChange, onBus
     } catch {
       if (generation.current === request) onChange(null, 'This image could not be read. Choose another JPG, PNG, or WebP file.')
     } finally {
-      if (generation.current !== request || pendingUrl.current === url) URL.revokeObjectURL(url)
+      if (url && (generation.current !== request || pendingUrl.current === url)) URL.revokeObjectURL(url)
       if (generation.current === request) { pendingUrl.current = null; onBusy(false) }
     }
   }

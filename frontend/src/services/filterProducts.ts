@@ -1,3 +1,5 @@
+import { categoryOptions } from '../data/categories'
+import type { ProductNavigationState } from '../types/productNavigation'
 import type { CategoryId, Product } from '../types/product'
 
 export type SortOrder = 'name-asc' | 'name-desc' | 'price-asc' | 'price-desc'
@@ -42,4 +44,21 @@ export function filterProducts(products: Product[], filters: ProductFilters, sor
     if (sort === 'price-desc') return b.price - a.price || a.name.localeCompare(b.name)
     return sort === 'name-desc' ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name)
   })
+}
+
+// Browser history can contain old or malformed state, so check it before using it.
+export function readProductNavigationState(value: unknown): ProductNavigationState | null {
+  if (!value || typeof value !== 'object') return null
+  const state = value as Partial<ProductNavigationState>
+  const filters = state.filters
+  if (typeof state.returnTo !== 'string'
+    || !(state.returnTo === '/marketplace' || state.returnTo.startsWith('/marketplace?'))
+    || !filters || typeof filters !== 'object'
+    || typeof filters.search !== 'string'
+    || typeof filters.location !== 'string'
+    || typeof filters.minPrice !== 'string'
+    || typeof filters.maxPrice !== 'string'
+    || !(filters.category === '' || categoryOptions.some(category => category.id === filters.category))
+    || !['name-asc', 'name-desc', 'price-asc', 'price-desc'].includes(state.sort ?? '')) return null
+  return { returnTo: state.returnTo, filters, sort: state.sort as SortOrder }
 }

@@ -9,7 +9,7 @@ import QuantitySelector from '../components/QuantitySelector'
 import SellerInfo from '../components/SellerInfo'
 import { mockProducts } from '../data/mockProducts'
 import type { Product } from '../types/product'
-import type { ProductNavigationState } from '../types/productNavigation'
+import { readProductNavigationState } from '../services/filterProducts'
 
 const currency = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 })
 
@@ -71,8 +71,8 @@ function ProductContent({ product }: { product: Product }) {
 export default function ProductDetails() {
   const { productId } = useParams<{ productId: string }>()
   const location = useLocation()
-  const navigation = location.state as ProductNavigationState | null
-  const returnTo = navigation?.returnTo?.startsWith('/marketplace') ? navigation.returnTo : '/marketplace'
+  const navigation = readProductNavigationState(location.state)
+  const returnTo = navigation?.returnTo ?? '/marketplace'
   const product = mockProducts.find(item => item.id === productId)
 
   return (

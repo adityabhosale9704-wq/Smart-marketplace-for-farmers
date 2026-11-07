@@ -20,7 +20,11 @@ export default function Checkout() {
 
   function changeField(field: keyof DeliveryDetails, value: string) {
     setDetails(previous => ({ ...previous, [field]: value }))
-    setErrors(previous => ({ ...previous, [field]: undefined }))
+    setErrors(previous => {
+      const next = { ...previous }
+      delete next[field]
+      return next
+    })
   }
 
   function reviewDetails(event: FormEvent<HTMLFormElement>) {

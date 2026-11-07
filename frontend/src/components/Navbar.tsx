@@ -30,7 +30,7 @@ export default function Navbar() {
       <button className="rounded-lg border border-stone-200 p-2 lg:hidden" aria-label={open ? 'Close navigation' : 'Open navigation'} aria-expanded={open} aria-controls="mobile-nav" onClick={() => setOpen(!open)}>{open ? <X /> : <Menu />}</button>
     </div>
     {open && <nav id="mobile-nav" aria-label="Mobile navigation" className="page-width grid gap-4 border-t border-stone-100 py-5 lg:hidden">
-      {[['Home', '/'], ['Marketplace', '/marketplace'], ['Sell Products', '/seller/dashboard'], ['About', '/#about'], ['My Orders (Demo)', '/my-orders'], ['Profile (Demo)', '/profile']].map(([label, href]) => <a key={label} href={href} onClick={() => setOpen(false)}>{label}</a>)}
+      {[['Home', '/'], ['Marketplace', '/marketplace'], ['Sell Products', '/seller/dashboard'], ['About', '/#about'], ['My Orders (Demo)', '/my-orders'], ['Profile (Demo)', '/profile']].map(([label, href]) => href.includes('#') ? <a key={label} href={href} onClick={() => setOpen(false)}>{label}</a> : <NavLink key={label} to={href} end={href === '/'} onClick={() => setOpen(false)}>{label}</NavLink>)}
       <NavLink to="/login" onClick={() => setOpen(false)}>Login</NavLink>
       <NavLink to="/register" onClick={() => setOpen(false)}>Register</NavLink>
     </nav>}
