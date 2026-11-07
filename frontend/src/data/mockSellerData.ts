@@ -1,5 +1,6 @@
 import { sellerListingCounts } from '../utils/sellerProductUtils'
-import type { DashboardStatistics, DemoSellerOrder, SellerListingSummary } from '../types/seller'
+import { sellerOrderSubtotal } from '../utils/sellerOrderUtils'
+import type { DashboardStatistics, SellerOrder, SellerOrderItem, SellerListingSummary } from '../types/seller'
 
 // An isolated fictional farm catalogue, not ownership of Marketplace listings.
 export const mockSellerListings: SellerListingSummary[] = [
@@ -10,25 +11,31 @@ export const mockSellerListings: SellerListingSummary[] = [
   { id: 'demo-farm-coriander', name: 'Coriander Seeds', category: 'seeds', price: 150, unit: 'kg', availableQuantity: 30, lowStockThreshold: 5, published: false },
 ]
 
-export const mockSellerOrders: DemoSellerOrder[] = [
-  { reference: 'SAMPLE-001', listingId: 'demo-farm-tomatoes', quantity: 10, status: 'Pending' },
-  { reference: 'SAMPLE-002', listingId: 'demo-farm-onions', quantity: 5, status: 'Confirmed' },
-  { reference: 'SAMPLE-003', listingId: 'demo-farm-tur-dal', quantity: 8, status: 'Completed' },
-  { reference: 'SAMPLE-004', listingId: 'demo-farm-tomatoes', quantity: 15, status: 'Completed' },
+// Historical line snapshots belong only to this fictional farm, never to other sellers.
+function sampleItem(index: number, quantity: number): SellerOrderItem {
+  const listing = mockSellerListings[index]
+  return { listingId: listing.id, productName: listing.name, quantity, unit: listing.unit, unitPrice: listing.price }
+}
+
+export const mockSellerOrders: SellerOrder[] = [
+  { reference: 'SAMPLE-001', buyerName: 'Sample Buyer A', date: '2026-11-01', items: [sampleItem(0, 10)], status: 'Pending', deliveryCity: 'Pune', deliveryState: 'Maharashtra' },
+  { reference: 'SAMPLE-002', buyerName: 'Sample Buyer B', date: '2026-11-02', items: [sampleItem(1, 5)], status: 'Confirmed', deliveryCity: 'Nashik', deliveryState: 'Maharashtra' },
+  { reference: 'SAMPLE-003', buyerName: 'Sample Buyer C', date: '2026-11-03', items: [sampleItem(3, 8)], status: 'Completed', deliveryCity: 'Nagpur', deliveryState: 'Maharashtra' },
+  { reference: 'SAMPLE-004', buyerName: 'Sample Buyer D', date: '2026-11-03', items: [sampleItem(0, 15)], status: 'Completed', deliveryCity: 'Mumbai', deliveryState: 'Maharashtra' },
+  { reference: 'SAMPLE-005', buyerName: 'Sample Buyer E', date: '2026-11-04', items: [sampleItem(0, 2), sampleItem(1, 3)], status: 'Pending', deliveryCity: 'Thane', deliveryState: 'Maharashtra', deliveryInstructions: 'Sample instruction only: discuss the delivery window before dispatch.' },
+  { reference: 'SAMPLE-006', buyerName: 'Sample Buyer F', date: '2026-11-05', items: [sampleItem(3, 4)], status: 'Confirmed', deliveryCity: 'Indore', deliveryState: 'Madhya Pradesh' },
+  { reference: 'SAMPLE-007', buyerName: 'Sample Buyer G', date: '2026-11-05', items: [sampleItem(2, 1), sampleItem(0, 2)], status: 'Cancelled', deliveryCity: 'Bhopal', deliveryState: 'Madhya Pradesh', deliveryInstructions: 'Historical cancelled sample; no delivery should be inferred.' },
+  { reference: 'SAMPLE-008', buyerName: 'Sample Buyer H', date: '2026-11-06', items: [sampleItem(1, 2)], status: 'Pending', deliveryCity: 'Surat', deliveryState: 'Gujarat' },
 ]
 
-// All statistics are derived. Missing product references are excluded from order figures.
-export function deriveSellerStatistics(listings: SellerListingSummary[] = [], orders: DemoSellerOrder[] = []): DashboardStatistics {
+// Order snapshots remain readable even if a current listing is absent.
+export function deriveSellerStatistics(listings: SellerListingSummary[] = [], orders: SellerOrder[] = []): DashboardStatistics {
   const counts = sellerListingCounts(listings)
-  const validOrders = orders.filter(order => listings.some(listing => listing.id === order.listingId))
   return {
     totalProducts: counts.total,
     activeListings: counts.active,
     outOfStockProducts: counts.outOfStock,
-    incomingOrders: validOrders.filter(order => order.status === 'Pending' || order.status === 'Confirmed').length,
-    demonstrationSalesValue: validOrders.reduce((sum, order) => {
-      const listing = listings.find(item => item.id === order.listingId)
-      return sum + (order.status === 'Completed' && listing ? listing.price * order.quantity : 0)
-    }, 0),
+    incomingOrders: orders.filter(order => order.status === 'Pending' || order.status === 'Confirmed').length,
+    demonstrationSalesValue: orders.reduce((sum, order) => sum + (order.status === 'Completed' ? sellerOrderSubtotal(order) : 0), 0),
   }
 }

@@ -37,7 +37,7 @@ export default function SellerDashboard() {
               </section>
               <div className="grid items-start gap-6 xl:grid-cols-2">
                 <RecentProducts listings={mockSellerListings} />
-                <RecentOrders orders={mockSellerOrders} listings={mockSellerListings} />
+                <RecentOrders orders={mockSellerOrders} />
               </div>
               <section aria-labelledby="stock-overview-title" className="rounded-2xl border border-stone-200 bg-white p-5 sm:p-6">
                 <h2 id="stock-overview-title" className="text-xl font-bold text-emerald-950">Stock overview</h2>

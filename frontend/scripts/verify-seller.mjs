@@ -15,21 +15,21 @@ try {
   const { CartContext } = await load('context/cartContextValue.ts')
   const cart = { cartItems: [], totalItemCount: 0, estimatedSubtotal: 0, message: '', storageWarning: false, addItem() {}, removeItem() {}, updateQuantity() {}, clearCart() {} }
   const render = element => renderToStaticMarkup(createElement(CartContext.Provider, { value: cart }, createElement(MemoryRouter, { initialEntries: ['/seller/dashboard'] }, element)))
-  assert.deepEqual(deriveSellerStatistics(listings, orders), { totalProducts: 5, activeListings: 3, outOfStockProducts: 1, incomingOrders: 2, demonstrationSalesValue: 1560 })
+  assert.deepEqual(deriveSellerStatistics(listings, orders), { totalProducts: 5, activeListings: 3, outOfStockProducts: 1, incomingOrders: 5, demonstrationSalesValue: 1560 })
   assert.deepEqual(deriveSellerStatistics(), { totalProducts: 0, activeListings: 0, outOfStockProducts: 0, incomingOrders: 0, demonstrationSalesValue: 0 })
-  assert.equal(deriveSellerStatistics([], orders).incomingOrders, 0)
+  assert.equal(deriveSellerStatistics([], orders).incomingOrders, 5)
   assert.equal(new Set(listings.map(listing => listing.id)).size, listings.length)
   for (const order of orders) {
-    assert.ok(listings.some(listing => listing.id === order.listingId))
+    assert.ok(order.items.every(item => listings.some(listing => listing.id === item.listingId)))
     assert.ok(order.reference.startsWith('SAMPLE-'))
   }
   const html = render(createElement(Routes, null, createElement(Route, { path: '/seller/dashboard', element: createElement(Dashboard) })))
-  for (const text of ['Welcome to your seller preview', 'accessible without login', 'Recent Products', 'Recent Orders', 'SAMPLE / DEMONSTRATION', 'Stock overview', 'Low stock', 'Out of stock', 'Coming Soon', 'href="/seller/dashboard"']) assert.ok(html.includes(text), text)
+  for (const text of ['Welcome to your seller preview', 'accessible without login', 'Recent Products', 'Recent Orders', 'SAMPLE / DEMONSTRATION', 'Stock overview', 'Low stock', 'Out of stock', 'href="/seller/dashboard"']) assert.ok(html.includes(text), text)
   assert.ok(html.includes(new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(1560)))
-  assert.equal((html.match(/Example: /g) || []).length, 4)
+  assert.equal((html.match(/Example: /g) || []).length, 5)
   assert.ok(render(createElement(Products)).includes('No sample products'))
   assert.ok(render(createElement(Orders)).includes('No sample orders'))
-  assert.ok(render(createElement(Orders, { orders, listings: [] })).includes('Sample product is no longer available'))
+  assert.ok(render(createElement(Orders, { orders: [{ ...orders[0], items: [] }] })).includes('No sample items'))
   const savedListings = listings.splice(0)
   const savedOrders = orders.splice(0)
   try {

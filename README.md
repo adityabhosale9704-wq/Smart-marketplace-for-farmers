@@ -1,6 +1,6 @@
 # Smart Marketplace for Farmers
 
-A marketplace for buying and selling agricultural products. Phase 1 Step 10 includes a responsive FarmMarket homepage a searchable, filterable Marketplace, and Product Details pages using demonstration product listings.
+A marketplace for buying and selling agricultural products. Phase 1 Step 11 includes a responsive FarmMarket homepage a searchable, filterable Marketplace, and Product Details pages using demonstration product listings.
 
 ## Stack
 
@@ -121,11 +121,11 @@ Run npm run test:auth from frontend for validation, error-focus helper, page ren
 
 Open /seller/dashboard or choose Sell Products in the Navbar. No login is required for this demonstration preview and no user is treated as authenticated. One future farmer account will support both buying and selling.
 
-Separate typed mockSellerData describes five fictional listings from a single demonstration farm and four SAMPLE orders. It does not assign Marketplace products to that farm. Dashboard counts derive from these arrays: 5 products, 3 active in-stock listings, 1 zero-stock listing, and 2 incoming (Pending/Confirmed) sample orders. Demonstration sales value is INR 1,560, computed only from Completed sample orders using listed unit prices; it is not real revenue and excludes delivery/fees.
+Separate typed mockSellerData describes five fictional listings from a single demonstration farm and eight SAMPLE orders. It does not assign Marketplace products to that farm. Dashboard counts derive from these arrays: 5 products, 3 active in-stock listings, 1 zero-stock listing, and 5 incoming (Pending/Confirmed) sample orders. Demonstration sales value is INR 1,560, computed only from Completed sample orders using listed unit prices; it is not real revenue and excludes delivery/fees.
 
 Recent Products shows category, unit price, stock, and Active/Draft/Out of stock status. Recent Orders resolves product references and calculates illustrative amounts. Stock overview compares quantities with per-listing thresholds in their own units, including low-stock onions and zero-stock wheat. No inventory is changed or quantities combined across units.
 
-Seller navigation is collapsible, with an Add Product preview form and My Products navigation and a disabled Coming Soon entry for Seller Orders. No management pages, order processing, data persistence, backend, Supabase, authentication, sessions, or ownership enforcement are implemented. Real integration must identify the farmer and enforce authorization and ownership on the Express backend.
+Seller navigation is collapsible, with an Add Product preview form and My Products and Seller Orders navigation. No management pages, order processing, data persistence, backend, Supabase, authentication, sessions, or ownership enforcement are implemented. Real integration must identify the farmer and enforce authorization and ownership on the Express backend.
 
 
 Run npm run test:seller from frontend for dashboard rendering, route/navigation destinations, derived statistics, low/zero stock, missing product references, empty datasets, and existing-page rendering. npm run test:auth, npm run test:cart, and npm run test:checkout remain regression checks. Manual visual checks remain for sidebar collapse, mobile/desktop appearance, keyboard use, navigation clicks, and overflow.
@@ -155,3 +155,18 @@ View / Edit opens an inline, keyboard-accessible editor. Edit name, positive INR
 Apply Demo Changes changes only this page and explicitly says nothing was saved or published. Filters remain active, so an edited row may disappear from results. Cancel or Escape closes the editor without applying changes. No deletion, publishing, inventory API, backend persistence, authentication, or ownership checks are implemented.
 
 Run npm run test:my-products from frontend for filtering, validation, stock/status consistency, updated counts, immutable source data/units, empty results, and page/editor rendering. Manual checks remain for actual editing, cancel/Escape, focus, filter/reset controls, live statistics, and mobile/desktop appearance.
+
+
+## Phase 1 Step 11: Seller Orders demonstration
+
+/seller/orders opens from the seller sidebar and dashboard Recent Orders link. Eight fictional SAMPLE orders contain only line snapshots from the isolated demonstration farm. Buyer display names are explicitly Sample Buyer A-H; delivery locations use only city/state and non-personal sample instructions. No real contact details, authentication, or actual orders are involved.
+
+Order lines capture product name, listing reference, quantity, unit, and unit price. Line estimates equal quantity multiplied by unit price, rounded to paise; seller-specific subtotals sum line estimates. kg and quintal are displayed separately, without adding their quantities. Shipping, taxes, fees, final payable amounts, and payment confirmations are not invented. Snapshots remain readable if a listing is later absent; frontend data selection does not provide authorization.
+
+Search matches reference, fictional buyer, or product name, ignoring case and unnecessary whitespace. Combine search with a status filter or Clear Filters. Statistics derive from all current page records: initially 8 total, 3 Pending, 2 Confirmed, 2 Completed, and 1 Cancelled.
+
+View Details opens an inline accessible panel with Close Details and Escape support. Permitted temporary transitions: Pending to Confirmed or Cancelled; Confirmed to Completed or Cancelled. Completed and Cancelled are final. Transition validation uses the latest React state. Counts and the selected details update together; filters remain active, so an updated row may stop matching.
+
+Changes exist only on Seller Orders and reset when leaving/reloading. Dashboard figures remain the original seeded examples. Nothing is saved, cancelled, fulfilled, deducted from inventory, charged, sent, or notified outside this temporary UI. One future farmer account supports both buying and selling. Real Express endpoints must verify identity, ownership, and transitions.
+
+Run npm run test:seller-orders from frontend for fixtures, filtering, calculations, transitions, counts, details rendering, and source-data isolation. Existing test scripts remain regression checks. Manual browser verification remains for live interactions, keyboard/focus behavior, responsive presentation, and real refresh reset.

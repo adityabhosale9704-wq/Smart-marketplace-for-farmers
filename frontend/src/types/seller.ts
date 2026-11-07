@@ -11,11 +11,38 @@ export interface SellerListingSummary {
   published: boolean
 }
 
-export interface DemoSellerOrder {
-  reference: string
+export type OrderStatus = 'Pending' | 'Confirmed' | 'Completed' | 'Cancelled'
+
+export interface SellerOrderItem {
   listingId: SellerListingSummary['id']
+  productName: string
   quantity: number
-  status: 'Pending' | 'Confirmed' | 'Completed' | 'Cancelled'
+  unit: Product['unit']
+  unitPrice: number
+}
+
+export interface SellerOrder {
+  reference: string
+  buyerName: string
+  date: string
+  items: SellerOrderItem[]
+  status: OrderStatus
+  deliveryCity: string
+  deliveryState: string
+  deliveryInstructions?: string
+}
+
+export interface SellerOrderFilters {
+  search: string
+  status: OrderStatus | ''
+}
+
+export interface SellerOrderCounts {
+  total: number
+  Pending: number
+  Confirmed: number
+  Completed: number
+  Cancelled: number
 }
 
 export interface DashboardStatistics {
