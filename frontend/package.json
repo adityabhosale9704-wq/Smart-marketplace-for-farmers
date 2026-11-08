@@ -7,6 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
+    "format": "prettier --write src",
+    "format:check": "prettier --check src",
     "preview": "vite preview",
     "test:cart": "node scripts/verify-cart.mjs",
     "test:checkout": "node scripts/verify-checkout.mjs",
@@ -31,6 +33,7 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
     "oxlint": "^1.90.0",
+    "prettier": "3.9.10",
     "tailwindcss": "^4.3.4",
     "typescript": "~7.0.2",
     "vite": "^8.3.6"

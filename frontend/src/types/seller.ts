@@ -53,7 +53,6 @@ export interface DashboardStatistics {
   demonstrationSalesValue: number
 }
 
-
 export type SellerProductStatus = 'Active' | 'Draft' | 'Out of Stock'
 
 export interface SellerProductFilters {

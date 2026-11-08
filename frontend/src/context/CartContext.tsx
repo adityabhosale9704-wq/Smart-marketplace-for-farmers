@@ -18,10 +18,14 @@ export default function CartProvider({ children }: { children: ReactNode }) {
     setStorageWarning(!saved)
   }, [state.items])
 
-  const cartItems = useMemo<CartLine[]>(() => state.items.flatMap(item => {
-    const product = mockProducts.find(candidate => candidate.id === item.productId)
-    return product ? [{ ...item, product }] : []
-  }), [state.items])
+  const cartItems = useMemo<CartLine[]>(
+    () =>
+      state.items.flatMap(item => {
+        const product = mockProducts.find(candidate => candidate.id === item.productId)
+        return product ? [{ ...item, product }] : []
+      }),
+    [state.items],
+  )
 
   const value: CartContextValue = {
     cartItems,

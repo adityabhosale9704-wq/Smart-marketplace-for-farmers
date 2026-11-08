@@ -26,25 +26,31 @@ export function cartReducer(state: CartState, action: CartAction): CartState {
   const items = validateSelections(state.items)
   if (action.type === 'clear') return { items: [], message: 'Cart cleared.' }
   if (action.type === 'remove') {
-    return { items: items.filter(item => item.productId !== action.productId), message: 'Item removed from cart.' }
+    return {
+      items: items.filter(item => item.productId !== action.productId),
+      message: 'Item removed from cart.',
+    }
   }
   const product = mockProducts.find(item => item.id === action.productId)
   const maximum = stockLimit(action.productId)
-  if (!product || !maximum) return { items, message: 'This demonstration product is unavailable and cannot be added.' }
+  if (!product || !maximum)
+    return { items, message: 'This demonstration product is unavailable and cannot be added.' }
   if (!Number.isSafeInteger(action.quantity) || action.quantity < 1) {
     return { items, message: 'Choose a positive whole quantity within the available stock.' }
   }
   const existing = items.find(item => item.productId === action.productId)
-  if (action.type === 'update' && !existing) return { items, message: 'This product is no longer in your cart.' }
+  if (action.type === 'update' && !existing)
+    return { items, message: 'This product is no longer in your cart.' }
   const previous = existing?.quantity ?? 0
   const requested = action.type === 'add' ? action.quantity : 0
   // Avoid overflow when an extremely large quantity is requested.
-  const quantity = action.type === 'add'
-    ? previous + Math.min(requested, maximum - previous)
-    : Math.min(action.quantity, maximum)
+  const quantity =
+    action.type === 'add'
+      ? previous + Math.min(requested, maximum - previous)
+      : Math.min(action.quantity, maximum)
   const limited = action.type === 'add' ? requested > maximum - previous : action.quantity > maximum
   const next = existing
-    ? items.map(item => item.productId === action.productId ? { ...item, quantity } : item)
+    ? items.map(item => (item.productId === action.productId ? { ...item, quantity } : item))
     : [...items, { productId: action.productId, quantity }]
   const message = limited
     ? `Stock limit reached for ${product.name}. Your cart contains ${quantity} ${product.unit}; no more can be added.`

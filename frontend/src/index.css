@@ -1,23 +1,60 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @layer base {
-  html { scroll-behavior: smooth; scroll-padding-top: 7rem; }
-  body { margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; color: #292524; background: white; }
-  button:not(:disabled), a { -webkit-tap-highlight-color: transparent; }
-  button:not(:disabled) { cursor: pointer; }
-  :focus-visible { outline: 3px solid #b45309; outline-offset: 4px; }
-  ::selection { background: #d1fae5; color: #064e3b; }
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 7rem;
+  }
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    color: #292524;
+    background: white;
+  }
+  button:not(:disabled),
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
+  button:not(:disabled) {
+    cursor: pointer;
+  }
+  :focus-visible {
+    outline: 3px solid #b45309;
+    outline-offset: 4px;
+  }
+  ::selection {
+    background: #d1fae5;
+    color: #064e3b;
+  }
   @media (prefers-reduced-motion: reduce) {
-    html { scroll-behavior: auto; }
-    *, *::before, *::after { transition: none !important; }
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      transition: none !important;
+    }
   }
 }
 
 @layer components {
-  .page-width { @apply mx-auto w-full max-w-7xl px-5 sm:px-8; }
-  .button-primary { @apply inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-700 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-800; }
-  .button-secondary { @apply inline-flex items-center justify-center rounded-lg border border-emerald-800 px-5 py-3 text-sm font-semibold text-emerald-900 hover:bg-emerald-100; }
-  .section-title { @apply mt-2 text-2xl font-bold tracking-tight text-emerald-950 sm:text-3xl; }
-  .eyebrow { @apply text-[11px] font-bold tracking-[0.16em] text-emerald-700; }
-  .coming-soon { @apply flex flex-col items-center gap-1 text-sm text-stone-500; }
+  .page-width {
+    @apply mx-auto w-full max-w-7xl px-5 sm:px-8;
+  }
+  .button-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-700 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-800;
+  }
+  .button-secondary {
+    @apply inline-flex items-center justify-center rounded-lg border border-emerald-800 px-5 py-3 text-sm font-semibold text-emerald-900 hover:bg-emerald-100;
+  }
+  .section-title {
+    @apply mt-2 text-2xl font-bold tracking-tight text-emerald-950 sm:text-3xl;
+  }
+  .eyebrow {
+    @apply text-[11px] font-bold tracking-[0.16em] text-emerald-700;
+  }
+  .coming-soon {
+    @apply flex flex-col items-center gap-1 text-sm text-stone-500;
+  }
 }

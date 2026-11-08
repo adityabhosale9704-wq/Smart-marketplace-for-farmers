@@ -21,8 +21,16 @@ export interface ProductImageSelection {
 }
 
 export const emptyProductForm: ProductFormValues = {
-  name: '', category: '', description: '', price: '', unit: '',
-  stock: '', city: '', district: '', state: '', harvestDate: '',
+  name: '',
+  category: '',
+  description: '',
+  price: '',
+  unit: '',
+  stock: '',
+  city: '',
+  district: '',
+  state: '',
+  harvestDate: '',
 }
 
 export const productUnits: Product['unit'][] = ['kg', 'quintal']
