@@ -23,12 +23,16 @@ try {
   process.exit(1)
 }
 
-const supabase = createClient(supabaseUrl, publishableKey, {
-  auth: {
-    persistSession: false,
-    autoRefreshToken: false,
-    detectSessionInUrl: false,
-  },
-})
+export function createSupabaseClient() {
+  return createClient(supabaseUrl, publishableKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  })
+}
+
+const supabase = createSupabaseClient()
 
 export default supabase

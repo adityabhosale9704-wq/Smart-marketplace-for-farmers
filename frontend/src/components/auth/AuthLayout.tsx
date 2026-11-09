@@ -7,10 +7,12 @@ export default function AuthLayout({
   title,
   description,
   children,
+  notice,
 }: {
   title: string
   description: string
   children: ReactNode
+  notice?: ReactNode
 }) {
   return (
     <>
@@ -45,8 +47,8 @@ export default function AuthLayout({
             <h1 className="text-3xl font-bold tracking-tight text-emerald-950">{title}</h1>
             <p className="mt-3 text-sm leading-6 text-stone-600">{description}</p>
             <p className="mt-5 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-6 text-amber-950">
-              Demonstration UI only. Use sample information and a password you do not use elsewhere.
-              Authentication is not connected. The app does not send or store these details.
+              {notice ??
+                'Demonstration UI only. Use sample information and a password you do not use elsewhere. Authentication is not connected. The app does not send or store these details.'}
             </p>
             <div className="mt-6">{children}</div>
           </section>

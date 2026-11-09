@@ -1,4 +1,6 @@
 import { BrowserRouter, Link, Route, Routes } from 'react-router-dom'
+import { useState } from 'react'
+import type { AuthSession } from './types/auth'
 import CartProvider from './context/CartContext'
 import Cart from './pages/Cart'
 import Checkout from './pages/Checkout'
@@ -16,6 +18,8 @@ import Marketplace from './pages/Marketplace'
 import ProductDetails from './pages/ProductDetails'
 
 export default function App() {
+  const [session, setSession] = useState<AuthSession | null>(null)
+
   return (
     <CartProvider>
       <BrowserRouter>
@@ -28,8 +32,8 @@ export default function App() {
           <Route path="/seller/products" element={<MyProducts />} />
           <Route path="/seller/add-product" element={<AddProduct />} />
           <Route path="/seller/dashboard" element={<SellerDashboard />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+          <Route path="/login" element={<Login session={session} onSessionChange={setSession} />} />
+          <Route path="/register" element={<Register onSessionClear={() => setSession(null)} />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/cart" element={<Cart />} />

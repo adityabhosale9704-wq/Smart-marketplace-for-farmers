@@ -39,13 +39,13 @@ export function validateRegister(values: RegisterForm): AuthErrors<RegisterForm>
   const password = passwordError(values.password)
   if (password) errors.password = password
   else if (!/\p{L}/u.test(values.password) || !/\p{N}/u.test(values.password))
-    errors.password = 'Include at least one letter and one number in your demo password.'
+    errors.password = 'Include at least one letter and one number in your password.'
   if (!values.confirmPassword) errors.confirmPassword = 'Please confirm your password.'
   else if (values.confirmPassword !== values.password)
     errors.confirmPassword = 'Passwords must match exactly.'
   if (!values.termsAcknowledged)
     errors.termsAcknowledged =
-      'Check the demonstration acknowledgement to continue. No legal acceptance is recorded.'
+      'Check the acknowledgement to continue. No legal acceptance is recorded.'
   return errors
 }
 
