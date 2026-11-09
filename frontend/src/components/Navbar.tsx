@@ -23,15 +23,31 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false)
   const auth = useContext(AuthContext)
   const navigate = useNavigate()
+  const [signingOut, setSigningOut] = useState(false)
+  const [logoutError, setLogoutError] = useState('')
 
-  function logout() {
-    auth?.clearSession()
-    setMenuOpen(false)
-    navigate('/login', { replace: true })
+  async function logout() {
+    if (!auth || signingOut) return
+    setSigningOut(true)
+    setLogoutError('')
+    try {
+      await auth.signOut()
+      setMenuOpen(false)
+      navigate('/login', { replace: true })
+    } catch (error) {
+      setLogoutError(error instanceof Error ? error.message : 'Could not sign out. Please retry.')
+    } finally {
+      setSigningOut(false)
+    }
   }
 
   return (
     <header className="sticky top-0 z-30 border-b border-stone-200 bg-white">
+      {logoutError && (
+        <p role="alert" className="page-width py-2 text-sm text-red-700">
+          {logoutError}
+        </p>
+      )}
       <a href="#main-content" className="sr-only focus:not-sr-only focus:block focus:p-3">
         Skip to content
       </a>
@@ -60,9 +76,11 @@ export default function Navbar() {
           </NavLink>
         </nav>
         <div className="hidden items-center gap-4 lg:flex">
-          {auth?.session ? (
-            <button type="button" className="button-primary" onClick={logout}>
-              Logout
+          {auth?.checking ? (
+            <span role="status">Checking session...</span>
+          ) : auth?.session ? (
+            <button type="button" disabled={signingOut} className="button-primary" onClick={logout}>
+              {signingOut ? 'Logging out...' : 'Logout'}
             </button>
           ) : (
             <>
@@ -129,13 +147,16 @@ export default function Navbar() {
               </NavLink>
             )
           })}
-          {auth?.session ? (
+          {auth?.checking ? (
+            <span role="status">Checking session...</span>
+          ) : auth?.session ? (
             <button
               type="button"
+              disabled={signingOut}
               className="text-left font-semibold text-emerald-800"
               onClick={logout}
             >
-              Logout
+              {signingOut ? 'Logging out...' : 'Logout'}
             </button>
           ) : (
             <>

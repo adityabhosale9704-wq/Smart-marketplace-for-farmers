@@ -1,5 +1,6 @@
 import { BrowserRouter, Link, Route, Routes } from 'react-router-dom'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { logoutFarmer, watchAuthSession } from './services/auth'
 import type { AuthSession } from './types/auth'
 import CartProvider from './context/CartContext'
 import { AuthContext } from './context/authContextValue'
@@ -21,9 +22,32 @@ import ProductDetails from './pages/ProductDetails'
 
 export default function App() {
   const [session, setSession] = useState<AuthSession | null>(null)
+  const [checking, setChecking] = useState(true)
+  const [authError, setAuthError] = useState('')
+
+  useEffect(
+    () =>
+      watchAuthSession((verified, error, pending) => {
+        setSession(verified)
+        setAuthError(error)
+        setChecking(pending)
+      }),
+    [],
+  )
+
+  async function signOut() {
+    await logoutFarmer()
+    setSession(null)
+    setAuthError('')
+  }
 
   return (
-    <AuthContext.Provider value={{ session, clearSession: () => setSession(null) }}>
+    <AuthContext.Provider value={{ session, checking, signOut }}>
+      {authError && (
+        <p role="alert" className="bg-amber-50 p-3 text-center text-sm text-amber-950">
+          {authError}
+        </p>
+      )}
       <CartProvider>
         <BrowserRouter>
           <Routes>
@@ -35,14 +59,8 @@ export default function App() {
             <Route path="/seller/products" element={<MyProducts />} />
             <Route path="/seller/add-product" element={<AddProduct />} />
             <Route path="/seller/dashboard" element={<SellerDashboard />} />
-            <Route
-              path="/login"
-              element={<Login session={session} onSessionChange={setSession} />}
-            />
-            <Route
-              path="/register"
-              element={<Register onSessionClear={() => setSession(null)} />}
-            />
+            <Route path="/login" element={<Login session={session} />} />
+            <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/checkout" element={<Checkout />} />

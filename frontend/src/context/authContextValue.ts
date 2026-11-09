@@ -3,5 +3,6 @@ import type { AuthSession } from '../types/auth'
 
 export const AuthContext = createContext<{
   session: AuthSession | null
-  clearSession: () => void
+  checking: boolean
+  signOut: () => Promise<void>
 } | null>(null)

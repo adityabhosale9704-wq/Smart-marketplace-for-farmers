@@ -21,6 +21,7 @@
     "test:profile": "node scripts/verify-profile.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.119.0",
     "lucide-react": "^1.69.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",

@@ -8,7 +8,7 @@ import { registerFarmer } from '../services/auth'
 import type { AuthErrors, RegisterForm } from '../types/auth'
 import { focusAuthError, validateRegister } from '../utils/authValidation'
 
-export default function Register({ onSessionClear }: { onSessionClear: () => void }) {
+export default function Register() {
   const [values, setValues] = useState<RegisterForm>({
     fullName: '',
     email: '',
@@ -52,7 +52,6 @@ export default function Register({ onSessionClear }: { onSessionClear: () => voi
     const controller = new AbortController()
     pending.current = controller
     setLoading(true)
-    onSessionClear()
     try {
       const message = await registerFarmer(values, controller.signal)
       if (!controller.signal.aborted) setNotice(message)

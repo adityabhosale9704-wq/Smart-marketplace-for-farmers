@@ -8,13 +8,7 @@ import { loginFarmer } from '../services/auth'
 import type { AuthErrors, AuthSession, LoginForm } from '../types/auth'
 import { focusAuthError, validateLogin } from '../utils/authValidation'
 
-export default function Login({
-  session,
-  onSessionChange,
-}: {
-  session: AuthSession | null
-  onSessionChange: (session: AuthSession | null) => void
-}) {
+export default function Login({ session }: { session: AuthSession | null }) {
   const [values, setValues] = useState<LoginForm>({ email: '', password: '', rememberEmail: false })
   const [errors, setErrors] = useState<AuthErrors<LoginForm>>({})
   const [notice, setNotice] = useState('')
@@ -50,16 +44,13 @@ export default function Login({
     const controller = new AbortController()
     pending.current = controller
     setLoading(true)
-    onSessionChange(null)
     try {
-      const verifiedSession = await loginFarmer(values, controller.signal)
+      await loginFarmer(values, controller.signal)
       if (!controller.signal.aborted) {
-        onSessionChange(verifiedSession)
         setNotice('Login successful. Your identity was verified by the backend.')
       }
     } catch (error) {
       if (!controller.signal.aborted) {
-        onSessionChange(null)
         setRequestError(error instanceof Error ? error.message : 'Login could not be completed.')
       }
     } finally {
@@ -75,7 +66,7 @@ export default function Login({
     <AuthLayout
       title="Welcome back"
       description="Explore the future of buying and selling with FarmMarket."
-      notice="Login uses the Express backend and Supabase Auth. Your verified identity and access token stay only in React memory until refresh. Marketplace, seller, order and profile records remain demonstration data."
+      notice="Login uses the Express backend and Supabase Auth. Supabase saves your browser session and renews it automatically. Marketplace, seller, order and profile records remain demonstration data."
     >
       <form noValidate onSubmit={submit} aria-busy={loading}>
         <fieldset disabled={loading} className="space-y-5">
@@ -105,7 +96,7 @@ export default function Login({
               onChange={event => change('rememberEmail', event.target.checked)}
               className="mt-1 size-4 shrink-0 accent-emerald-700"
             />
-            Remember email (UI only; nothing is saved)
+            Remember email (UI only; does not control session persistence)
           </label>
           <Link
             to="/forgot-password"
@@ -130,9 +121,8 @@ export default function Login({
           </p>
           {session && (
             <p className="text-sm text-emerald-900">
-              Signed in as {session.user.email ?? 'a verified farmer'}. This session clears on
-              refresh; token renewal is not implemented yet. The profile and seller previews are
-              still demos.
+              Signed in as {session.user.email ?? 'a verified farmer'}. Supabase manages your saved
+              browser session. The profile and seller previews are still demos.
             </p>
           )}
           <p className="text-sm text-stone-600">

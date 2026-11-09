@@ -5,7 +5,67 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router-dom'
 import { createServer } from 'vite'
 
-const server = await createServer({ server: { middlewareMode: true, hmr: false } })
+// Replace only the browser SDK boundary; all application auth logic still runs.
+let savedSession = null
+let restoreError = null
+let signOutError = null
+let saveError = null
+const listeners = new Set()
+const savedPairs = []
+const signOutScopes = []
+const emit = (event, session) => {
+  savedSession = session
+  for (const callback of listeners) callback(event, session)
+}
+const originalClientFixture = globalThis.__farmMarketAuthFixture
+globalThis.__farmMarketAuthFixture = {
+  auth: {
+    async setSession(tokens) {
+      if (saveError) return { data: { session: null }, error: saveError }
+      savedPairs.push(tokens)
+      const session = { ...tokens, user: { id: 'verified-farmer', email: 'farmer@example.test' } }
+      emit('SIGNED_IN', session)
+      return { data: { session }, error: null }
+    },
+    async getSession() {
+      return { data: { session: savedSession }, error: restoreError }
+    },
+    onAuthStateChange(callback) {
+      listeners.add(callback)
+      queueMicrotask(() => {
+        if (listeners.has(callback)) callback('INITIAL_SESSION', savedSession)
+      })
+      return {
+        data: {
+          subscription: {
+            unsubscribe() {
+              listeners.delete(callback)
+            },
+          },
+        },
+      }
+    },
+    async signOut(options) {
+      signOutScopes.push(options.scope)
+      if (signOutError) return { error: signOutError }
+      emit('SIGNED_OUT', null)
+      return { error: null }
+    },
+  },
+}
+const server = await createServer({
+  server: { middlewareMode: true, hmr: false },
+  plugins: [
+    {
+      name: 'mock-browser-auth',
+      enforce: 'pre',
+      load(id) {
+        if (id.replaceAll('\\', '/').endsWith('/src/services/supabase.ts'))
+          return 'export default globalThis.__farmMarketAuthFixture'
+      },
+    },
+  ],
+})
 const originalFetch = globalThis.fetch
 try {
   const load = path => server.ssrLoadModule('/src/' + path)
@@ -168,6 +228,7 @@ try {
     return new Response(JSON.stringify({ id: 'verified-farmer', email: 'farmer@example.test' }))
   }
   const recovery = await verifyRecoveryLink(recoveryLink)
+  assert.equal(savedPairs.length, 0, 'Recovery credentials must not establish a persistent session')
   assert.deepEqual(recovery, { accessToken: 'fixture-access', refreshToken: 'fixture-refresh' })
   globalThis.fetch = async (url, options) => {
     assert.equal(String(url), 'http://127.0.0.1:5000/api/auth/reset-password')
@@ -227,6 +288,10 @@ try {
   assert.equal(calls[0].options.signal, controller.signal)
   const verified = await loginFarmer(login, controller.signal)
   assert.deepEqual(verified, { user, accessToken: sessionResponse.accessToken })
+  assert.deepEqual(savedPairs.at(-1), {
+    access_token: sessionResponse.accessToken,
+    refresh_token: sessionResponse.refreshToken,
+  })
   assert.deepEqual(Object.keys(verified).sort(), ['accessToken', 'user'])
   assert.deepEqual(JSON.parse(calls[1].options.body), {
     email: login.email,
@@ -322,7 +387,8 @@ try {
   let temporarySession = verified
   const auth = {
     session: temporarySession,
-    clearSession() {
+    checking: false,
+    async signOut() {
       temporarySession = null
     },
   }
@@ -330,19 +396,142 @@ try {
     render(() => createElement(AuthContext.Provider, { value: auth }, createElement(Navbar)))
   assert.match(navigation(), />Logout</)
   assert.ok(!navigation().includes('href="/login"'))
-  auth.clearSession()
+  await auth.signOut()
   auth.session = temporarySession
   assert.equal(temporarySession, null)
   assert.match(navigation(), /href="\/login"/)
   assert.match(navigation(), /href="\/register"/)
   assert.ok(!navigation().includes('>Logout<'))
+  auth.checking = true
+  assert.match(navigation(), /Checking session/)
+  assert.ok(!navigation().includes('href="/login"'))
+  auth.checking = false
+
+  const { watchAuthSession, getAuthenticatedSession, logoutFarmer } = await load('services/auth.ts')
+  const flush = () => new Promise(resolve => setImmediate(resolve))
+  const changes = []
+  const normalSession = {
+    access_token: sessionResponse.accessToken,
+    refresh_token: sessionResponse.refreshToken,
+    user,
+  }
+  savedSession = normalSession
+  const identityRequests = []
+  globalThis.fetch = async (url, options) => {
+    assert.ok(String(url).endsWith('/api/auth/me'))
+    identityRequests.push(options.headers.Authorization)
+    return reply(user)
+  }
+  let stopWatching = watchAuthSession((session, error, checking) =>
+    changes.push({ session, error, checking }),
+  )
+  await flush()
+  assert.deepEqual(changes.at(-1), { session: verified, error: '', checking: false })
+  assert.ok(changes.some(change => change.checking && change.session === null))
+
+  emit('TOKEN_REFRESHED', { ...normalSession, access_token: 'renewed-fixture-access-token' })
+  await flush()
+  assert.equal(changes.at(-1).session.accessToken, 'renewed-fixture-access-token')
+  assert.equal(identityRequests.at(-1), 'Bearer renewed-fixture-access-token')
+  assert.equal((await getAuthenticatedSession()).accessToken, 'renewed-fixture-access-token')
+
+  // Recovery uses the separate service flow and must never become a normal login.
+  const callsBeforeRecovery = identityRequests.length
+  emit('PASSWORD_RECOVERY', normalSession)
+  await flush()
+  assert.equal(changes.at(-1).session, null)
+  assert.equal(identityRequests.length, callsBeforeRecovery)
+
+  globalThis.fetch = async () => {
+    throw new Error('Private network information')
+  }
+  emit('TOKEN_REFRESHED', normalSession)
+  await flush()
+  assert.equal(changes.at(-1).session, null)
+  assert.match(changes.at(-1).error, /Cannot reach/)
+  assert.equal(
+    savedSession,
+    normalSession,
+    'A network outage must not destroy a refreshable session',
+  )
+
+  globalThis.fetch = async () => reply({ message: 'Invalid or expired access token' }, 401)
+  emit('SIGNED_IN', normalSession)
+  await flush()
+  assert.equal(changes.at(-1).session, null)
+  assert.equal(savedSession, null)
+  assert.equal(signOutScopes.at(-1), 'local')
+  stopWatching()
+
+  savedSession = null
+  changes.length = 0
+  stopWatching = watchAuthSession((session, error, checking) =>
+    changes.push({ session, error, checking }),
+  )
+  await flush()
+  assert.deepEqual(changes.at(-1), { session: null, error: '', checking: false })
+  restoreError = { message: 'Invalid refresh token' }
+  emit('TOKEN_REFRESHED', null)
+  await flush()
+  assert.equal(changes.at(-1).session, null)
+  assert.match(changes.at(-1).error, /saved session could not be restored/)
+  restoreError = null
+  stopWatching()
+
+  savedSession = normalSession
+  signOutError = { message: 'Private token details' }
+  await assert.rejects(logoutFarmer(), /Could not sign out.*saved session may still be active/)
+  assert.equal(savedSession, normalSession, 'A failed sign-out must not be claimed as successful')
+  signOutError = null
+  await logoutFarmer()
+  assert.equal(savedSession, null)
+  assert.equal(signOutScopes.at(-1), 'local')
+  assert.equal(await getAuthenticatedSession(), null)
+
+  // A slow identity check must not resurrect a session after logout.
+  let finishIdentity
+  globalThis.fetch = () =>
+    new Promise(resolve => {
+      finishIdentity = resolve
+    })
+  savedSession = normalSession
+  changes.length = 0
+  stopWatching = watchAuthSession((session, error, checking) =>
+    changes.push({ session, error, checking }),
+  )
+  await flush()
+  assert.equal(typeof finishIdentity, 'function')
+  await logoutFarmer()
+  await flush()
+  finishIdentity(reply(user))
+  await flush()
+  assert.equal(changes.at(-1).session, null)
+  stopWatching()
+  assert.equal(listeners.size, 0)
+
+  globalThis.fetch = async url => reply(String(url).endsWith('/login') ? sessionResponse : user)
+  saveError = { message: 'Private SDK error' }
+  await assert.rejects(loginFarmer(login), /browser session could not be saved/)
+  saveError = null
+  const clientSource = await readFile(
+    new URL('../src/services/supabase.ts', import.meta.url),
+    'utf8',
+  )
+  assert.match(clientSource, /persistSession: true/)
+  assert.match(clientSource, /autoRefreshToken: true/)
+  assert.match(clientSource, /detectSessionInUrl: false/)
+  assert.ok(!/localStorage|sessionStorage|console\./.test(clientSource))
+  console.log(
+    'PASS: SDK session save/restore, verified-only navigation, missing/invalid sessions, renewed token use, safe outage handling, local logout success/failure, recovery isolation, stale-request protection and subscription cleanup (mocked SDK).',
+  )
   const appSource = await readFile(new URL('../src/App.tsx', import.meta.url), 'utf8')
-  assert.match(appSource, /clearSession: \(\) => setSession\(null\)/)
+  assert.match(appSource, /await logoutFarmer\(\)/)
+  assert.match(appSource, /watchAuthSession/)
   const navbarSource = await readFile(
     new URL('../src/components/Navbar.tsx', import.meta.url),
     'utf8',
   )
-  assert.match(navbarSource, /auth\?\.clearSession\(\)/)
+  assert.match(navbarSource, /await auth.signOut\(\)/)
   assert.match(navbarSource, /navigate\('\/login', \{ replace: true \}\)/)
   for (const file of ['pages/Login.tsx', 'pages/Register.tsx', 'services/auth.ts', 'App.tsx']) {
     const content = await readFile(new URL('../src/' + file, import.meta.url), 'utf8')
@@ -365,9 +554,11 @@ try {
     'PASS: mocked registration/login payloads, backend errors, network/invalid responses, Bearer identity verification, verification failure/pending states, token projection and authenticated markup.',
   )
   console.log(
-    'Manual browser checks remain: actual submit/loading/error interactions, disabled controls, focus, route changes during requests, refresh clearing the session and responsive appearance. Live Supabase was not contacted.',
+    'Manual browser checks remain: actual submit/loading/error interactions, disabled controls, focus, refresh persistence, automatic renewal, logout, recovery email and responsive appearance. Live Supabase was not contacted.',
   )
 } finally {
   globalThis.fetch = originalFetch
+  if (originalClientFixture === undefined) delete globalThis.__farmMarketAuthFixture
+  else globalThis.__farmMarketAuthFixture = originalClientFixture
   await server.close()
 }
