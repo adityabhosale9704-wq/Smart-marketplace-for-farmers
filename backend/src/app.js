@@ -1,5 +1,7 @@
 import express from 'express'
 import cors from 'cors'
+import supabase from './config/supabase.js'
+import { requireAuth } from './middleware/auth.js'
 
 const app = express()
 const frontendOrigin = process.env.FRONTEND_ORIGIN ?? 'http://127.0.0.1:5173'
@@ -10,6 +12,26 @@ app.use(express.json({ limit: '100kb' }))
 
 app.get('/api/health', (request, response) => {
   response.json({ status: 'ok', message: 'FarmMarket API is running' })
+})
+
+app.get('/api/db-health', async (request, response) => {
+  const { error } = await supabase
+    .from('products')
+    .select('id')
+    .limit(1)
+    .abortSignal(AbortSignal.timeout(5000))
+
+  if (error) {
+    return response
+      .status(503)
+      .json({ status: 'error', message: 'Database connection unavailable' })
+  }
+
+  response.json({ status: 'ok', message: 'Database connection is working' })
+})
+
+app.get('/api/auth/me', requireAuth, (request, response) => {
+  response.json(request.user)
 })
 
 app.use((request, response) => {
