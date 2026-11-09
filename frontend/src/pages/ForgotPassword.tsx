@@ -48,7 +48,7 @@ export default function ForgotPassword() {
     <AuthLayout
       title="Forgot your password?"
       description="Request an email to help recover your account."
-      notice="Recovery requests use Supabase Auth through our backend. Changing your password from the recovery link will be available in the next step."
+      notice="Recovery requests use Supabase Auth through our backend. Open the recovery email link to choose a new password."
     >
       <form noValidate onSubmit={submit} aria-busy={loading} className="space-y-5">
         <fieldset disabled={loading} className="space-y-5">

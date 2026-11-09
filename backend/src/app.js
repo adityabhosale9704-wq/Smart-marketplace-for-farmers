@@ -185,6 +185,59 @@ app.post('/api/auth/forgot-password', async (request, response) => {
   })
 })
 
+app.post('/api/auth/reset-password', requireAuth, async (request, response) => {
+  response.set('Cache-Control', 'no-store')
+  const { password, refreshToken } = request.body ?? {}
+  if (
+    typeof password !== 'string' ||
+    !password.trim() ||
+    password.length < 12 ||
+    password.length > 128 ||
+    !/\p{L}/u.test(password) ||
+    !/\p{N}/u.test(password)
+  ) {
+    return response
+      .status(400)
+      .json({ message: 'Use 12–128 characters with at least one letter and one number.' })
+  }
+  if (typeof refreshToken !== 'string' || !refreshToken.trim()) {
+    return response.status(400).json({ message: 'A valid recovery session is required.' })
+  }
+  try {
+    const client = createSupabaseClient()
+    const accessToken = request.get('Authorization').split(' ')[1]
+    const { data, error } = await client.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    })
+    if (error || data.user?.id !== request.user.id) {
+      const status = error && ![400, 401, 403, 422].includes(error.status) ? 503 : 401
+      return response
+        .status(status)
+        .json({ message: 'Recovery session could not be verified. Request a new recovery email.' })
+    }
+    const result = await client.auth.updateUser({ password })
+    if (result.error) {
+      const status =
+        result.error.status === 429
+          ? 429
+          : [400, 401, 403, 422].includes(result.error.status)
+            ? 400
+            : 503
+      return response.status(status).json({
+        message:
+          'Password could not be updated. Check the password requirements or request a new recovery email.',
+      })
+    }
+    if (result.data.user?.id !== request.user.id) {
+      return response.status(503).json({ message: 'Password update could not be confirmed.' })
+    }
+    response.json({ message: 'Password updated. Please log in with your new password.' })
+  } catch {
+    response.status(503).json({ message: 'Password recovery unavailable. Try again later.' })
+  }
+})
+
 app.use((request, response) => {
   response.status(404).json({ message: 'Route not found' })
 })

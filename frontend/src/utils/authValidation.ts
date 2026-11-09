@@ -1,4 +1,10 @@
-import type { AuthErrors, ForgotPasswordForm, LoginForm, RegisterForm } from '../types/auth'
+import type {
+  AuthErrors,
+  ForgotPasswordForm,
+  LoginForm,
+  RegisterForm,
+  ResetPasswordForm,
+} from '../types/auth'
 
 function emailError(value: string): string | undefined {
   const email = value.trim()
@@ -52,6 +58,18 @@ export function validateRegister(values: RegisterForm): AuthErrors<RegisterForm>
 export function validateForgotPassword(values: ForgotPasswordForm): AuthErrors<ForgotPasswordForm> {
   const error = emailError(values.email)
   return error ? { email: error } : {}
+}
+
+export function validateResetPassword(values: ResetPasswordForm): AuthErrors<ResetPasswordForm> {
+  const errors: AuthErrors<ResetPasswordForm> = {}
+  const password = passwordError(values.password)
+  if (password) errors.password = password
+  else if (!/\p{L}/u.test(values.password) || !/\p{N}/u.test(values.password))
+    errors.password = 'Include at least one letter and one number in your password.'
+  if (!values.confirmPassword) errors.confirmPassword = 'Please confirm your password.'
+  else if (values.confirmPassword !== values.password)
+    errors.confirmPassword = 'Passwords must match exactly.'
+  return errors
 }
 
 // Focus the first invalid field without logging or persisting any entered values.

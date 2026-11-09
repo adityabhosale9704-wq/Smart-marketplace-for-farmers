@@ -8,6 +8,7 @@ import Checkout from './pages/Checkout'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
 import Home from './pages/Home'
 import MyOrders from './pages/MyOrders'
 import Profile from './pages/Profile'
@@ -43,6 +44,7 @@ export default function App() {
               element={<Register onSessionClear={() => setSession(null)} />}
             />
             <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/cart" element={<Cart />} />
             <Route path="/products/:productId" element={<ProductDetails />} />

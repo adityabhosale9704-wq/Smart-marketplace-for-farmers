@@ -12,6 +12,21 @@ try {
   const { validateLogin, validateRegister, validateForgotPassword, focusAuthError } =
     await load('utils/authValidation.ts')
   const { CartContext } = await load('context/cartContextValue.ts')
+  const { validateResetPassword } = await load('utils/authValidation.ts')
+  assert.deepEqual(
+    validateResetPassword({ password: 'NewPassword123!', confirmPassword: 'NewPassword123!' }),
+    {},
+  )
+  for (const password of ['', '   ', 'short', 'a'.repeat(12), '1'.repeat(12), 'a'.repeat(129)]) {
+    assert.ok(validateResetPassword({ password, confirmPassword: password }).password)
+  }
+  assert.ok(
+    validateResetPassword({ password: 'NewPassword123!', confirmPassword: '' }).confirmPassword,
+  )
+  assert.ok(
+    validateResetPassword({ password: 'NewPassword123!', confirmPassword: 'different' })
+      .confirmPassword,
+  )
   const sample = 'a'.repeat(12) + '1'
   const login = { email: 'sample@example.test', password: sample, rememberEmail: false }
   const registration = {
@@ -130,6 +145,55 @@ try {
     'PASS: form validation, error focus, auth page rendering, password masking/accessibility, real-auth notices and existing-page rendering.',
   )
   const { registerFarmer, loginFarmer, requestPasswordReset } = await load('services/auth.ts')
+  const { verifyRecoveryLink, resetPassword } = await load('services/auth.ts')
+  const { default: ResetPassword } = await load('pages/ResetPassword.tsx')
+  const resetHtml = render(ResetPassword)
+  assert.match(resetHtml, /Reset your password/)
+  assert.match(resetHtml, /Checking recovery link/)
+  assert.match(resetHtml, /<fieldset disabled/)
+  assert.match(resetHtml, /href="\/login"/)
+  for (const url of [
+    'http://127.0.0.1:5173/reset-password',
+    'http://127.0.0.1:5173/reset-password#error=expired',
+    'http://127.0.0.1:5173/reset-password#type=recovery&access_token=only-one-token',
+    'http://127.0.0.1:5173/reset-password?code=unsupported',
+  ]) {
+    await assert.rejects(verifyRecoveryLink(url), /recovery|link/i)
+  }
+  const recoveryLink =
+    'http://127.0.0.1:5173/reset-password#type=recovery&access_token=fixture-access&refresh_token=fixture-refresh'
+  globalThis.fetch = async (url, options) => {
+    assert.equal(String(url), 'http://127.0.0.1:5000/api/auth/me')
+    assert.equal(options.headers.Authorization, 'Bearer fixture-access')
+    return new Response(JSON.stringify({ id: 'verified-farmer', email: 'farmer@example.test' }))
+  }
+  const recovery = await verifyRecoveryLink(recoveryLink)
+  assert.deepEqual(recovery, { accessToken: 'fixture-access', refreshToken: 'fixture-refresh' })
+  globalThis.fetch = async (url, options) => {
+    assert.equal(String(url), 'http://127.0.0.1:5000/api/auth/reset-password')
+    assert.equal(options.method, 'POST')
+    assert.equal(options.headers.Authorization, 'Bearer fixture-access')
+    assert.deepEqual(JSON.parse(options.body), {
+      password: 'NewPassword123!',
+      refreshToken: 'fixture-refresh',
+    })
+    return new Response(JSON.stringify({ message: 'Password updated' }))
+  }
+  await resetPassword(recovery, 'NewPassword123!')
+  globalThis.fetch = async () =>
+    new Response(JSON.stringify({ message: 'Invalid or expired access token' }), { status: 401 })
+  await assert.rejects(verifyRecoveryLink(recoveryLink), /expired/)
+  await assert.rejects(resetPassword(recovery, 'NewPassword123!'), /expired/)
+  const resetSource = await readFile(
+    new URL('../src/pages/ResetPassword.tsx', import.meta.url),
+    'utf8',
+  )
+  assert.match(resetSource, /history.replaceState/)
+  assert.match(resetSource, /setSession\(null\)/)
+  assert.ok(!/localStorage|sessionStorage|console\./.test(resetSource))
+  console.log(
+    'PASS: reset password validation, disabled initial form, missing/unsupported/expired recovery links, mocked verified session and update payload/success/failure. URL cleanup and state clearing checked statically.',
+  )
   const user = { id: 'verified-farmer', email: 'farmer@example.test' }
   const sessionResponse = {
     message: 'Login successful',

@@ -9,7 +9,18 @@ let mode = 'empty'
 let queryCount = 0
 let authMode = 'valid'
 let authCount = 0
-const testToken = 'opaque-test-token-not-a-real-jwt'
+// Unsigned fixture only: the local Auth server, not Supabase, accepts this token.
+const testToken = [
+  { alg: 'HS256', typ: 'JWT' },
+  { sub: 'verified-user', exp: Math.floor(Date.now() / 1000) + 3600 },
+  'fixture-signature',
+]
+  .map(value =>
+    Buffer.from(typeof value === 'string' ? value : JSON.stringify(value)).toString('base64url'),
+  )
+  .join('.')
+let updateMode = 'success'
+let updateCount = 0
 const testPassword = 'Test123!'
 const signupSessionToken = 'local-session-token-not-a-jwt'
 let signupMode = 'confirmation'
@@ -21,6 +32,29 @@ let recoveryCount = 0
 const loginAccessToken = 'login-test-access-token-not-a-real-jwt'
 const loginRefreshToken = 'login-test-refresh-token-placeholder'
 const database = createServer((request, response) => {
+  if (request.url === '/auth/v1/user' && request.method === 'PUT') {
+    assert.equal(request.headers.authorization, `Bearer ${testToken}`)
+    updateCount++
+    let body = ''
+    request.on('data', chunk => {
+      body += chunk
+    })
+    request.on('end', () => {
+      assert.deepEqual(JSON.parse(body), {
+        password: 'NewPassword123!',
+        code_challenge: null,
+        code_challenge_method: null,
+      })
+      if (updateMode === 'network-error') return request.socket.destroy()
+      response.setHeader('Content-Type', 'application/json')
+      if (typeof updateMode === 'number') {
+        response.statusCode = updateMode
+        return response.end(JSON.stringify({ message: `Private details ${testToken}` }))
+      }
+      response.end(JSON.stringify({ id: 'verified-user', email: 'farmer@example.com' }))
+    })
+    return
+  }
   if (request.url.startsWith('/auth/v1/recover?')) {
     const url = new URL(request.url, 'http://localhost')
     assert.equal(url.searchParams.get('redirect_to'), 'http://127.0.0.1:5173/reset-password')
@@ -512,6 +546,45 @@ try {
     'PASS: recovery validation, isolated client, redirect URL, generic account privacy, rate limits and safe service/network errors. No real emails sent.',
   )
   const missingRoute = await fetch(`${base}/api/missing`)
+  authMode = 'valid'
+  const resetRequest = input =>
+    fetch(`${base}/api/auth/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${testToken}` },
+      body: JSON.stringify(input),
+    })
+  assert.equal((await fetch(`${base}/api/auth/reset-password`, { method: 'POST' })).status, 401)
+  for (const password of ['', '   ', 'short', 'a'.repeat(12), '1'.repeat(12), 'a'.repeat(129)]) {
+    assert.equal((await resetRequest({ password, refreshToken: 'fixture-refresh' })).status, 400)
+  }
+  assert.equal((await resetRequest({ password: 'NewPassword123!' })).status, 400)
+  assert.equal(updateCount, 0)
+  authMode = 401
+  assert.equal(
+    (await resetRequest({ password: 'NewPassword123!', refreshToken: 'fixture-refresh' })).status,
+    401,
+  )
+  assert.equal(updateCount, 0)
+  authMode = 'valid'
+  for (updateMode of ['success', 400, 429, 503, 'network-error']) {
+    const response = await resetRequest({
+      password: 'NewPassword123!',
+      refreshToken: 'fixture-refresh',
+    })
+    assert.equal(
+      response.status,
+      updateMode === 'success' ? 200 : updateMode === 400 ? 400 : updateMode === 429 ? 429 : 503,
+    )
+    const body = await response.text()
+    assert.ok(!body.includes(testToken))
+    assert.ok(!body.includes('NewPassword123!'))
+    if (updateMode === 'success') assert.match(body, /Password updated/)
+  }
+  assert.ok(!output.includes(testToken))
+  assert.ok(!output.includes('NewPassword123!'))
+  console.log(
+    'PASS: mocked password reset authorization, validation, update success/failure, rate limits and safe network errors.',
+  )
   assert.equal(missingRoute.status, 404)
   assert.deepEqual(await missingRoute.json(), { message: 'Route not found' })
   const cors = await fetch(`${base}/api/health`, {

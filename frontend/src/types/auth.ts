@@ -18,6 +18,15 @@ export interface ForgotPasswordForm {
 }
 
 export type AuthErrors<T> = Partial<Record<keyof T, string>>
+export interface ResetPasswordForm {
+  password: string
+  confirmPassword: string
+}
+
+export interface RecoverySession {
+  accessToken: string
+  refreshToken: string
+}
 
 export interface AuthUser {
   id: string
