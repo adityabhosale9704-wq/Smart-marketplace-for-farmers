@@ -150,6 +150,41 @@ app.post('/api/auth/login', async (request, response) => {
   }
 })
 
+app.post('/api/auth/forgot-password', async (request, response) => {
+  response.set('Cache-Control', 'no-store')
+  const email =
+    typeof request.body?.email === 'string' ? request.body.email.trim().toLowerCase() : ''
+
+  if (email.length > 254 || !/^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/.test(email)) {
+    return response.status(400).json({ message: 'Enter a valid email address' })
+  }
+
+  try {
+    const client = createSupabaseClient()
+    const { error } = await client.auth.resetPasswordForEmail(email, {
+      redirectTo: new URL('/reset-password', frontendOrigin).href,
+    })
+
+    // Unknown accounts receive the same message as existing accounts.
+    if (error && error.code !== 'user_not_found') {
+      if (error.status === 429) {
+        return response
+          .status(429)
+          .json({ message: 'Too many recovery requests. Try again later.' })
+      }
+      return response
+        .status(503)
+        .json({ message: 'Password recovery unavailable. Try again later.' })
+    }
+  } catch {
+    return response.status(503).json({ message: 'Password recovery unavailable. Try again later.' })
+  }
+
+  response.json({
+    message: 'If an account exists for this email, a password reset email will be sent.',
+  })
+})
+
 app.use((request, response) => {
   response.status(404).json({ message: 'Route not found' })
 })

@@ -1,6 +1,7 @@
 import { useCart } from '../hooks/useCart'
-import { NavLink } from 'react-router-dom'
-import { useState } from 'react'
+import { NavLink, useNavigate } from 'react-router-dom'
+import { useContext, useState } from 'react'
+import { AuthContext } from '../context/authContextValue'
 import { Menu, ShoppingBasket, UserRound, X } from 'lucide-react'
 import Brand from './Brand'
 
@@ -20,6 +21,14 @@ function navigationLinkClass({ isActive }: { isActive: boolean }) {
 export default function Navbar() {
   const { totalItemCount } = useCart()
   const [menuOpen, setMenuOpen] = useState(false)
+  const auth = useContext(AuthContext)
+  const navigate = useNavigate()
+
+  function logout() {
+    auth?.clearSession()
+    setMenuOpen(false)
+    navigate('/login', { replace: true })
+  }
 
   return (
     <header className="sticky top-0 z-30 border-b border-stone-200 bg-white">
@@ -51,12 +60,20 @@ export default function Navbar() {
           </NavLink>
         </nav>
         <div className="hidden items-center gap-4 lg:flex">
-          <NavLink to="/login" className="text-sm font-semibold text-emerald-800">
-            Login
-          </NavLink>
-          <NavLink to="/register" className="button-primary">
-            Register
-          </NavLink>
+          {auth?.session ? (
+            <button type="button" className="button-primary" onClick={logout}>
+              Logout
+            </button>
+          ) : (
+            <>
+              <NavLink to="/login" className="text-sm font-semibold text-emerald-800">
+                Login
+              </NavLink>
+              <NavLink to="/register" className="button-primary">
+                Register
+              </NavLink>
+            </>
+          )}
         </div>
         <NavLink
           to="/profile"
@@ -112,12 +129,24 @@ export default function Navbar() {
               </NavLink>
             )
           })}
-          <NavLink to="/login" onClick={() => setMenuOpen(false)}>
-            Login
-          </NavLink>
-          <NavLink to="/register" onClick={() => setMenuOpen(false)}>
-            Register
-          </NavLink>
+          {auth?.session ? (
+            <button
+              type="button"
+              className="text-left font-semibold text-emerald-800"
+              onClick={logout}
+            >
+              Logout
+            </button>
+          ) : (
+            <>
+              <NavLink to="/login" onClick={() => setMenuOpen(false)}>
+                Login
+              </NavLink>
+              <NavLink to="/register" onClick={() => setMenuOpen(false)}>
+                Register
+              </NavLink>
+            </>
+          )}
         </nav>
       )}
     </header>

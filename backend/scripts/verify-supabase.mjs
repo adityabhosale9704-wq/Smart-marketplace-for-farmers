@@ -16,9 +16,36 @@ let signupMode = 'confirmation'
 let signupCount = 0
 let loginMode = 'valid'
 let loginCount = 0
+let recoveryMode = 'success'
+let recoveryCount = 0
 const loginAccessToken = 'login-test-access-token-not-a-real-jwt'
 const loginRefreshToken = 'login-test-refresh-token-placeholder'
 const database = createServer((request, response) => {
+  if (request.url.startsWith('/auth/v1/recover?')) {
+    const url = new URL(request.url, 'http://localhost')
+    assert.equal(url.searchParams.get('redirect_to'), 'http://127.0.0.1:5173/reset-password')
+    assert.equal(request.method, 'POST')
+    assert.notEqual(request.headers.authorization, `Bearer ${loginAccessToken}`)
+    recoveryCount++
+    let body = ''
+    request.on('data', chunk => {
+      body += chunk
+    })
+    request.on('end', () => {
+      assert.equal(JSON.parse(body).email, 'farmer@example.com')
+      if (recoveryMode === 'network-error') return request.socket.destroy()
+      response.setHeader('Content-Type', 'application/json')
+      if (typeof recoveryMode === 'object') {
+        response.statusCode = recoveryMode.status
+        response.setHeader('X-Supabase-Api-Version', '2024-01-01')
+        return response.end(
+          JSON.stringify({ code: recoveryMode.code, msg: `Private details ${testToken}` }),
+        )
+      }
+      response.end('{}')
+    })
+    return
+  }
   if (request.url === '/auth/v1/signup') {
     assert.equal(request.method, 'POST')
     assert.notEqual(request.headers.authorization, `Bearer ${signupSessionToken}`)
@@ -431,6 +458,59 @@ try {
   mode = 'empty'
   assert.equal((await fetch(`${base}/api/db-health`)).status, 200)
   assert.equal((await fetch(`${base}/api/health`)).status, 200)
+  for (const input of [
+    {},
+    null,
+    [],
+    { email: 42 },
+    { email: '' },
+    { email: 'bad' },
+    { email: 'a@b..com' },
+    { email: 'a'.repeat(255) + '@b.com' },
+  ]) {
+    const response = await fetch(`${base}/api/auth/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    })
+    assert.equal(response.status, 400)
+  }
+  assert.equal(recoveryCount, 0)
+  for (recoveryMode of [
+    'success',
+    { status: 404, code: 'user_not_found' },
+    { status: 429, code: 'over_email_send_rate_limit' },
+    { status: 503, code: 'unexpected_failure' },
+    'network-error',
+  ]) {
+    const response = await fetch(`${base}/api/auth/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: ' Farmer@Example.com ' }),
+    })
+    const status =
+      recoveryMode === 'success' || recoveryMode.code === 'user_not_found'
+        ? 200
+        : recoveryMode.status === 429
+          ? 429
+          : 503
+    assert.equal(response.status, status)
+    assert.equal(response.headers.get('cache-control'), 'no-store')
+    assert.deepEqual(await response.json(), {
+      message:
+        status === 200
+          ? 'If an account exists for this email, a password reset email will be sent.'
+          : status === 429
+            ? 'Too many recovery requests. Try again later.'
+            : 'Password recovery unavailable. Try again later.',
+    })
+  }
+  assert.ok(recoveryCount >= 5)
+  assert.ok(!output.includes(testToken))
+  assert.ok(!output.includes('Private details'))
+  console.log(
+    'PASS: recovery validation, isolated client, redirect URL, generic account privacy, rate limits and safe service/network errors. No real emails sent.',
+  )
   const missingRoute = await fetch(`${base}/api/missing`)
   assert.equal(missingRoute.status, 404)
   assert.deepEqual(await missingRoute.json(), { message: 'Route not found' })

@@ -90,12 +90,9 @@ try {
     const { default: Page } = await load('pages/' + file + '.tsx')
     const html = render(Page, { session: null, onSessionChange() {}, onSessionClear() {} })
     assert.ok(html.includes(title))
-    if (file === 'ForgotPassword') assert.match(html, /Demonstration UI only/)
-    else {
-      assert.ok(!html.includes('Authentication is not connected'))
-      assert.match(html, /aria-busy="false"/)
-      assert.ok(html.includes('<fieldset'))
-    }
+    assert.ok(!html.includes('Authentication is not connected'))
+    assert.match(html, /aria-busy="false"/)
+    assert.ok(html.includes('<fieldset'))
     assert.match(html, /novalidate/i)
     assert.match(html, /href="\/login"/)
     assert.match(html, /href="\/register"/)
@@ -130,9 +127,9 @@ try {
     assert.ok(render(Page).includes('Farm'))
   }
   console.log(
-    'PASS: existing form validation, error focus, auth page rendering, password masking/accessibility, real-auth notices, demo-only password recovery, and existing-page rendering.',
+    'PASS: form validation, error focus, auth page rendering, password masking/accessibility, real-auth notices and existing-page rendering.',
   )
-  const { registerFarmer, loginFarmer } = await load('services/auth.ts')
+  const { registerFarmer, loginFarmer, requestPasswordReset } = await load('services/auth.ts')
   const user = { id: 'verified-farmer', email: 'farmer@example.test' }
   const sessionResponse = {
     message: 'Login successful',
@@ -178,21 +175,45 @@ try {
   assert.ok(calls.every(call => call.options.cache === 'no-store'))
   assert.ok(calls.every(call => !('credentials' in call.options)))
 
+  const recoveryMessage =
+    'If an account exists for this email, a password reset email will be sent.'
+  globalThis.fetch = async (url, options) => {
+    assert.equal(String(url), 'http://127.0.0.1:5000/api/auth/forgot-password')
+    assert.equal(options.method, 'POST')
+    assert.deepEqual(JSON.parse(options.body), { email: login.email })
+    assert.equal(options.headers.Authorization, undefined)
+    assert.equal(options.signal, controller.signal)
+    return reply({ message: recoveryMessage })
+  }
+  assert.equal(
+    await requestPasswordReset({ email: login.email }, controller.signal),
+    recoveryMessage,
+  )
+
   for (const status of [400, 401, 429, 503]) {
     globalThis.fetch = async () => reply({ message: 'Safe backend error' }, status)
     await assert.rejects(registerFarmer(registration), /Safe backend error/)
     await assert.rejects(loginFarmer(login), /Safe backend error/)
+    await assert.rejects(requestPasswordReset({ email: login.email }), /Safe backend error/)
   }
   globalThis.fetch = async () => {
     throw new Error('Internal network details')
   }
   await assert.rejects(registerFarmer(registration), /Cannot reach the authentication server/)
   await assert.rejects(loginFarmer(login), /Cannot reach the authentication server/)
+  await assert.rejects(
+    requestPasswordReset({ email: login.email }),
+    /Cannot reach the authentication server/,
+  )
   globalThis.fetch = async () => new Response('not JSON')
   await assert.rejects(registerFarmer(registration), /unreadable response/)
   globalThis.fetch = async () => reply({})
   await assert.rejects(registerFarmer(registration), /registration response was incomplete/)
   await assert.rejects(loginFarmer(login), /login response was incomplete/)
+  await assert.rejects(
+    requestPasswordReset({ email: login.email }),
+    /recovery response was incomplete/,
+  )
   for (const identity of [{ ...user, id: 'different-user' }, {}, null]) {
     globalThis.fetch = async url =>
       reply(String(url).endsWith('/login') ? sessionResponse : identity)
@@ -232,11 +253,38 @@ try {
   assert.match(loggedIn, /Signed in as/)
   assert.match(loggedIn, /farmer@example.test/)
   assert.ok(!loggedIn.includes(sessionResponse.accessToken))
+  const { AuthContext } = await load('context/authContextValue.ts')
+  const { default: Navbar } = await load('components/Navbar.tsx')
+  let temporarySession = verified
+  const auth = {
+    session: temporarySession,
+    clearSession() {
+      temporarySession = null
+    },
+  }
+  const navigation = () =>
+    render(() => createElement(AuthContext.Provider, { value: auth }, createElement(Navbar)))
+  assert.match(navigation(), />Logout</)
+  assert.ok(!navigation().includes('href="/login"'))
+  auth.clearSession()
+  auth.session = temporarySession
+  assert.equal(temporarySession, null)
+  assert.match(navigation(), /href="\/login"/)
+  assert.match(navigation(), /href="\/register"/)
+  assert.ok(!navigation().includes('>Logout<'))
+  const appSource = await readFile(new URL('../src/App.tsx', import.meta.url), 'utf8')
+  assert.match(appSource, /clearSession: \(\) => setSession\(null\)/)
+  const navbarSource = await readFile(
+    new URL('../src/components/Navbar.tsx', import.meta.url),
+    'utf8',
+  )
+  assert.match(navbarSource, /auth\?\.clearSession\(\)/)
+  assert.match(navbarSource, /navigate\('\/login', \{ replace: true \}\)/)
   for (const file of ['pages/Login.tsx', 'pages/Register.tsx', 'services/auth.ts', 'App.tsx']) {
     const content = await readFile(new URL('../src/' + file, import.meta.url), 'utf8')
     assert.ok(!/localStorage|sessionStorage|console\./.test(content), file)
   }
-  for (const file of ['Login', 'Register']) {
+  for (const file of ['Login', 'Register', 'ForgotPassword']) {
     const content = await readFile(
       new URL('../src/pages/' + file + '.tsx', import.meta.url),
       'utf8',
@@ -244,8 +292,11 @@ try {
     assert.match(content, /disabled=\{loading\}/)
     assert.match(content, /role="alert"/)
     assert.match(content, /pending\.current\?\.abort\(\)/)
-    assert.match(content, /password: ''/)
+    if (file !== 'ForgotPassword') assert.match(content, /password: ''/)
   }
+  console.log(
+    'PASS: mocked recovery payload, generic response, network/rate-limit errors, recovery form safeguards and navigation rendered with/without a session. Logout click/state wiring checked statically; browser interaction remains manual.',
+  )
   console.log(
     'PASS: mocked registration/login payloads, backend errors, network/invalid responses, Bearer identity verification, verification failure/pending states, token projection and authenticated markup.',
   )

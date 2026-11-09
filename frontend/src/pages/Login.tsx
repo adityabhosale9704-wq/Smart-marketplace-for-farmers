@@ -126,7 +126,7 @@ export default function Login({
             </p>
           )}
           <p role="status" className="text-sm leading-6 text-emerald-900">
-            {notice}
+            {session ? notice : ''}
           </p>
           {session && (
             <p className="text-sm text-emerald-900">
