@@ -31,7 +31,61 @@ let recoveryMode = 'success'
 let recoveryCount = 0
 const loginAccessToken = 'login-test-access-token-not-a-real-jwt'
 const loginRefreshToken = 'login-test-refresh-token-placeholder'
+const profileRows = new Map()
+const profileRequests = []
+let profileMode = 'normal'
 const database = createServer((request, response) => {
+  if (request.url.startsWith('/rest/v1/profiles?')) {
+    const url = new URL(request.url, 'http://localhost')
+    const owner =
+      request.headers.authorization === `Bearer ${testToken}` ? 'verified-user' : 'login-user'
+    assert.ok(
+      [`Bearer ${testToken}`, `Bearer ${loginAccessToken}`].includes(request.headers.authorization),
+    )
+    assert.equal(request.headers.apikey, 'sb_publishable_test_placeholder')
+    assert.equal(url.searchParams.get('select'), 'full_name,mobile,city,district,state,pin_code')
+    if (request.method !== 'POST') assert.equal(url.searchParams.get('id'), `eq.${owner}`)
+    profileRequests.push({ owner, method: request.method })
+    if (profileMode === 'network-error') return request.socket.destroy()
+    response.setHeader('Content-Type', 'application/json')
+    if (profileMode === 'error' || profileMode === 'expired') {
+      response.statusCode = profileMode === 'expired' ? 401 : 403
+      return response.end(
+        JSON.stringify({ code: '42501', message: 'Private database information' }),
+      )
+    }
+    if (request.method === 'GET')
+      return response.end(JSON.stringify(profileRows.has(owner) ? [profileRows.get(owner)] : []))
+    let body = ''
+    request.on('data', chunk => {
+      body += chunk
+    })
+    request.on('end', () => {
+      const values = JSON.parse(body)
+      const columns = ['full_name', 'mobile', 'city', 'district', 'state', 'pin_code']
+      assert.deepEqual(
+        Object.keys(values).sort(),
+        (request.method === 'POST' ? [...columns, 'id'] : columns).sort(),
+      )
+      if (request.method === 'POST') {
+        assert.equal(values.id, owner)
+        if (profileMode === 'race') {
+          profileRows.set(owner, {})
+          response.statusCode = 409
+          return response.end(
+            JSON.stringify({ code: '23505', message: 'Private duplicate information' }),
+          )
+        }
+        assert.ok(!profileRows.has(owner), 'A profile must not be duplicated')
+        profileRows.set(owner, values)
+      } else {
+        assert.equal(request.method, 'PATCH')
+        if (profileRows.has(owner)) profileRows.set(owner, { ...profileRows.get(owner), ...values })
+      }
+      response.end(JSON.stringify(profileRows.get(owner) ?? null))
+    })
+    return
+  }
   if (request.url === '/auth/v1/user' && request.method === 'PUT') {
     assert.equal(request.headers.authorization, `Bearer ${testToken}`)
     updateCount++
@@ -164,6 +218,11 @@ const database = createServer((request, response) => {
   assert.equal(request.method, 'GET')
   if (request.url === '/auth/v1/user') {
     authCount++
+    if (request.headers.authorization === 'Bearer invalid-token') {
+      response.statusCode = 401
+      response.setHeader('Content-Type', 'application/json')
+      return response.end(JSON.stringify({ message: 'Invalid token' }))
+    }
     assert.ok(
       [`Bearer ${testToken}`, `Bearer ${loginAccessToken}`].includes(request.headers.authorization),
     )
@@ -182,7 +241,7 @@ const database = createServer((request, response) => {
               ? 'second-verified-user'
               : 'verified-user',
         email: 'farmer@example.com',
-        user_metadata: { private: 'must not be returned' },
+        user_metadata: { private: 'must not be returned', fullName: 'Registered Farmer' },
       }),
     )
   }
@@ -547,6 +606,117 @@ try {
   )
   const missingRoute = await fetch(`${base}/api/missing`)
   authMode = 'valid'
+  const profileRequest = (method = 'GET', body, token = testToken, query = '') =>
+    fetch(`${base}/api/profile${query}`, {
+      method,
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    })
+  for (const method of ['GET', 'PUT']) {
+    assert.equal((await fetch(`${base}/api/profile`, { method })).status, 401)
+    assert.equal(
+      (await profileRequest(method, method === 'PUT' ? {} : undefined, 'invalid-token')).status,
+      401,
+    )
+  }
+  assert.equal(profileRequests.length, 0)
+  const missingProfile = await profileRequest()
+  assert.equal(missingProfile.status, 200)
+  assert.equal(missingProfile.headers.get('cache-control'), 'no-store')
+  assert.deepEqual(await missingProfile.json(), {
+    profile: {
+      fullName: 'Registered Farmer',
+      email: 'farmer@example.com',
+      mobile: '',
+      city: '',
+      district: '',
+      state: '',
+      pinCode: '',
+    },
+    needsCompletion: true,
+  })
+  const ownProfile = {
+    fullName: '  Verified   Farmer ',
+    mobile: '',
+    city: 'Pune',
+    district: 'Pune',
+    state: 'Maharashtra',
+    pinCode: '411001',
+  }
+  const beforeInvalid = profileRequests.length
+  for (const body of [
+    null,
+    [],
+    {},
+    { ...ownProfile, id: 'another-user' },
+    { ...ownProfile, userId: 'another-user' },
+    { ...ownProfile, email: 'changed@example.com' },
+    { ...ownProfile, sellerId: 'other' },
+    { ...ownProfile, fullName: 42 },
+    { ...ownProfile, fullName: 'A' },
+    { ...ownProfile, fullName: '1234' },
+    { ...ownProfile, city: 'X'.repeat(101) },
+    { ...ownProfile, mobile: '1234567890' },
+    { ...ownProfile, pinCode: '012345' },
+    { ...ownProfile, state: 'Maha\u0000rashtra' },
+  ]) {
+    assert.equal((await profileRequest('PUT', body)).status, 400)
+  }
+  assert.equal(profileRequests.length, beforeInvalid, 'Invalid writes must not reach the database')
+  const firstSave = await profileRequest('PUT', ownProfile)
+  assert.equal(firstSave.status, 200)
+  assert.equal(profileRows.size, 1)
+  assert.equal(profileRows.get('verified-user').mobile, null)
+  const savedProfile = await firstSave.json()
+  assert.equal(savedProfile.needsCompletion, false)
+  assert.equal(savedProfile.profile.fullName, 'Verified Farmer')
+  assert.equal(savedProfile.profile.email, 'farmer@example.com')
+  assert.deepEqual(
+    await (await profileRequest('GET', undefined, testToken, '?id=login-user')).json(),
+    savedProfile,
+  )
+  const otherProfile = await profileRequest('GET', undefined, loginAccessToken)
+  assert.equal((await otherProfile.json()).needsCompletion, true)
+  assert.equal(
+    (await profileRequest('PUT', { ...ownProfile, fullName: 'Second Farmer' }, loginAccessToken))
+      .status,
+    200,
+  )
+  assert.equal(profileRows.size, 2)
+  assert.equal(profileRows.get('verified-user').full_name, 'Verified Farmer')
+  const editedProfile = await profileRequest('PUT', {
+    ...ownProfile,
+    fullName: 'Updated Farmer',
+    mobile: '9876543210',
+  })
+  assert.equal(editedProfile.status, 200)
+  assert.equal((await editedProfile.json()).profile.mobile, '9876543210')
+  assert.equal(profileRows.size, 2)
+  profileRows.delete('verified-user')
+  profileMode = 'race'
+  assert.equal((await profileRequest('PUT', ownProfile)).status, 200)
+  assert.equal(profileRows.get('verified-user').full_name, 'Verified Farmer')
+  profileMode = 'normal'
+  const nullable = Object.fromEntries(Object.keys(ownProfile).map(field => [field, null]))
+  const incomplete = await profileRequest('PUT', nullable)
+  assert.equal(incomplete.status, 200)
+  assert.equal((await incomplete.json()).needsCompletion, true)
+  for (profileMode of ['error', 'network-error', 'expired']) {
+    for (const method of ['GET', 'PUT']) {
+      const response = await profileRequest(method, method === 'PUT' ? ownProfile : undefined)
+      assert.equal(response.status, profileMode === 'expired' ? 401 : 503)
+      const text = await response.text()
+      assert.ok(!text.includes('Private'))
+      assert.ok(!text.includes(testToken))
+    }
+  }
+  profileMode = 'normal'
+  assert.ok(!output.includes('Registered Farmer'))
+  assert.ok(!output.includes('9876543210'))
+  console.log(
+    'PASS: mocked private profile reads/writes, JWT-derived ownership, forwarded user token, missing-profile metadata, validation, nullable fields, insert/update grants, duplicate-race retry and safe database failures. Real RLS was not executed.',
+  )
+  authMode = 'valid'
   const resetRequest = input =>
     fetch(`${base}/api/auth/reset-password`, {
       method: 'POST',
@@ -591,6 +761,47 @@ try {
     headers: { Origin: environment.FRONTEND_ORIGIN },
   })
   assert.equal(cors.headers.get('access-control-allow-origin'), environment.FRONTEND_ORIGIN)
+  for (const origin of [
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'https://unrelated.example',
+    'http://localhost:5174',
+  ]) {
+    const allowed = ['http://localhost:5173', 'http://127.0.0.1:5173'].includes(origin)
+    const preflight = await fetch(`${base}/api/auth/register`, {
+      method: 'OPTIONS',
+      headers: {
+        Origin: origin,
+        'Access-Control-Request-Method': 'POST',
+        'Access-Control-Request-Headers': 'content-type,authorization',
+      },
+    })
+    assert.equal(preflight.status, 204)
+    assert.equal(preflight.headers.get('access-control-allow-origin'), allowed ? origin : null)
+    assert.match(preflight.headers.get('vary'), /Origin/i)
+    if (allowed) {
+      assert.ok(preflight.headers.get('access-control-allow-methods').split(',').includes('POST'))
+      assert.match(preflight.headers.get('access-control-allow-headers'), /content-type/i)
+      assert.match(preflight.headers.get('access-control-allow-headers'), /authorization/i)
+    }
+    // An invalid body checks POST CORS headers without creating an account.
+    const invalidRegistration = await fetch(`${base}/api/auth/register`, {
+      method: 'POST',
+      headers: { Origin: origin, 'Content-Type': 'application/json' },
+      body: '{}',
+    })
+    assert.equal(invalidRegistration.status, 400)
+    assert.equal(
+      invalidRegistration.headers.get('access-control-allow-origin'),
+      allowed ? origin : null,
+    )
+    assert.deepEqual(await invalidRegistration.json(), {
+      message: 'Enter a full name of 2–100 characters',
+    })
+  }
+  console.log(
+    'PASS: exact localhost/127.0.0.1 origin allowlist, registration preflight, POST headers, Authorization header and unrelated-origin rejection. No account created.',
+  )
   const malformed = await fetch(`${base}/api/health`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

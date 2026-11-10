@@ -17,6 +17,7 @@ export function validateProfile(input: FarmerProfile): {
   const profile = { ...input }
   const errors: ProfileErrors = {}
   for (const field of Object.keys(profile) as (keyof FarmerProfile)[]) {
+    if (field === 'email') continue // Email is read-only and comes from verified Auth.
     profile[field] = profile[field].trim()
     if (['fullName', 'city', 'district', 'state'].includes(field))
       profile[field] = profile[field].replace(/\s+/g, ' ')
@@ -36,8 +37,6 @@ export function validateProfile(input: FarmerProfile): {
       (profile.fullName.match(/\p{L}/gu)?.length ?? 0) < 2)
   )
     errors.fullName = 'Enter a name with at least two letters and no numbers.'
-  if (!errors.email && !/^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/.test(profile.email))
-    errors.email = 'Enter a valid email address.'
   if (!errors.mobile && profile.mobile && !/^[6-9]\d{9}$/.test(profile.mobile))
     errors.mobile = 'Enter a 10-digit Indian mobile starting with 6, 7, 8, or 9, or leave blank.'
   for (const field of ['city', 'district', 'state'] as const) {

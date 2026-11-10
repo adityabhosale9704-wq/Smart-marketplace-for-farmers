@@ -10,8 +10,8 @@ export default function AccountSettings() {
         Account Settings
       </h2>
       <p className="mt-3 text-sm leading-6 text-stone-600">
-        Future settings only. No account is signed in, so password changes and logout are not
-        available.
+        These account settings shortcuts are not available yet. Use Logout in the navigation to sign
+        out.
       </p>
       <ul className="mt-5 space-y-2">
         {[

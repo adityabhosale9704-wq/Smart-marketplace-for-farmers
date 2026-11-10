@@ -11,7 +11,7 @@ const mobileLinks = [
   ['Sell Products', '/seller/dashboard'],
   ['About', '/#about'],
   ['My Orders (Demo)', '/my-orders'],
-  ['Profile (Demo)', '/profile'],
+  ['My Profile', '/profile'],
 ]
 
 function navigationLinkClass({ isActive }: { isActive: boolean }) {
@@ -95,12 +95,12 @@ export default function Navbar() {
         </div>
         <NavLink
           to="/profile"
-          title="Profile - public demonstration preview"
-          aria-label="Profile (Demo) - public preview"
+          title="My farmer profile"
+          aria-label="My Profile"
           className="ml-auto flex shrink-0 flex-col items-center rounded-lg border border-stone-200 p-2 text-emerald-900 lg:ml-0"
         >
           <UserRound aria-hidden="true" className="size-5" />
-          <span className="mt-0.5 text-[10px]">Demo</span>
+          <span className="mt-0.5 text-[10px]">Profile</span>
         </NavLink>
         <NavLink
           to="/cart"

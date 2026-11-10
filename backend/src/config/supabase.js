@@ -23,8 +23,9 @@ try {
   process.exit(1)
 }
 
-export function createSupabaseClient() {
+export function createSupabaseClient(accessToken) {
   return createClient(supabaseUrl, publishableKey, {
+    ...(accessToken ? { global: { headers: { Authorization: `Bearer ${accessToken}` } } } : {}),
     auth: {
       persistSession: false,
       autoRefreshToken: false,

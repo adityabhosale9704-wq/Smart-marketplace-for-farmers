@@ -30,8 +30,8 @@ export default function AccountNavigation() {
         One account, both possibilities
       </h2>
       <p className="mt-3 text-sm leading-6 text-stone-600">
-        Explore buying and selling previews. No role selection, separate accounts, or authenticated
-        access is created.
+        One farmer account supports buying and selling. Product and order pages still use
+        demonstration data.
       </p>
       <div className="mt-5 grid items-start gap-5 sm:grid-cols-2">
         {sections.map(section => (

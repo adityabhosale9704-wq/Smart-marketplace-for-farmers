@@ -5,9 +5,14 @@ import { requireAuth } from './middleware/auth.js'
 
 const app = express()
 const frontendOrigin = process.env.FRONTEND_ORIGIN ?? 'http://127.0.0.1:5173'
+// Browsers treat localhost and 127.0.0.1 as different origins.
+const localFrontendOrigins = ['http://localhost:5173', 'http://127.0.0.1:5173']
+const allowedOrigins = localFrontendOrigins.includes(frontendOrigin)
+  ? localFrontendOrigins
+  : [frontendOrigin]
 
 app.disable('x-powered-by')
-app.use(cors({ origin: frontendOrigin }))
+app.use(cors({ origin: allowedOrigins }))
 app.use(express.json({ limit: '100kb' }))
 
 app.get('/api/health', (request, response) => {
@@ -236,6 +241,132 @@ app.post('/api/auth/reset-password', requireAuth, async (request, response) => {
   } catch {
     response.status(503).json({ message: 'Password recovery unavailable. Try again later.' })
   }
+})
+
+const profileColumns = 'full_name,mobile,city,district,state,pin_code'
+
+function profileResponse(row, request) {
+  return {
+    profile: {
+      fullName: row?.full_name ?? (row ? '' : request.profileFullName),
+      email: request.user.email ?? '',
+      mobile: row?.mobile ?? '',
+      city: row?.city ?? '',
+      district: row?.district ?? '',
+      state: row?.state ?? '',
+      pinCode: row?.pin_code ?? '',
+    },
+    needsCompletion:
+      !row || ['full_name', 'city', 'district', 'state', 'pin_code'].some(field => !row[field]),
+  }
+}
+
+app.get('/api/profile', requireAuth, async (request, response) => {
+  response.set('Cache-Control', 'no-store')
+  const client = createSupabaseClient(request.accessToken)
+  const { data, error, status } = await client
+    .from('profiles')
+    .select(profileColumns)
+    .eq('id', request.user.id)
+    .maybeSingle()
+    .abortSignal(AbortSignal.timeout(5000))
+  if (error)
+    return response.status(status === 401 ? 401 : 503).json({
+      message:
+        status === 401
+          ? 'Your session expired. Please log in again.'
+          : 'Your profile could not be loaded. Please try again.',
+    })
+  response.json(profileResponse(data, request))
+})
+
+app.put('/api/profile', requireAuth, async (request, response) => {
+  response.set('Cache-Control', 'no-store')
+  const fields = {
+    fullName: 'full_name',
+    mobile: 'mobile',
+    city: 'city',
+    district: 'district',
+    state: 'state',
+    pinCode: 'pin_code',
+  }
+  const input = request.body
+  if (
+    !input ||
+    typeof input !== 'object' ||
+    Array.isArray(input) ||
+    Object.keys(input).some(field => !Object.hasOwn(fields, field))
+  ) {
+    return response.status(400).json({
+      message:
+        'Send only the editable profile fields. Email and account ID cannot be changed here.',
+    })
+  }
+  const values = {}
+  const errors = {}
+  for (const [field, column] of Object.entries(fields)) {
+    if (input[field] !== null && typeof input[field] !== 'string') {
+      errors[field] = 'Enter text or leave this field blank.'
+      continue
+    }
+    let value = input[field]?.trim() ?? ''
+    if (['fullName', 'city', 'district', 'state'].includes(field))
+      value = value.replace(/\s+/g, ' ')
+    values[column] = value || null
+    // Nullable database fields may remain incomplete; nonempty values must be valid.
+    if (!value) continue
+    if (
+      [...value].some(character => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127)
+    )
+      errors[field] = 'Remove unsupported control characters.'
+    else if (field === 'mobile' && !/^[6-9]\d{9}$/.test(value))
+      errors[field] = 'Enter a valid 10-digit Indian mobile number.'
+    else if (field === 'pinCode' && !/^[1-9]\d{5}$/.test(value))
+      errors[field] = 'Enter a valid six-digit PIN code.'
+    else if (
+      !['mobile', 'pinCode'].includes(field) &&
+      (value.length < 2 || value.length > 100 || !/\p{L}/u.test(value))
+    )
+      errors[field] = 'Use 2–100 characters containing letters.'
+    else if (
+      field === 'fullName' &&
+      (!/^[\p{L}\p{M}][\p{L}\p{M} .'-]*$/u.test(value) || (value.match(/\p{L}/gu)?.length ?? 0) < 2)
+    )
+      errors[field] = 'Enter a name with at least two letters and no numbers.'
+  }
+  if (Object.keys(errors).length)
+    return response
+      .status(400)
+      .json({ message: 'Check your profile name, mobile, location and PIN code.', errors })
+
+  const client = createSupabaseClient(request.accessToken)
+  const update = () =>
+    client
+      .from('profiles')
+      .update(values)
+      .eq('id', request.user.id)
+      .select(profileColumns)
+      .maybeSingle()
+      .abortSignal(AbortSignal.timeout(5000))
+  let result = await update()
+  if (!result.error && !result.data) {
+    // Avoid upsert: the existing grants deliberately forbid updating the ID column.
+    result = await client
+      .from('profiles')
+      .insert({ id: request.user.id, ...values })
+      .select(profileColumns)
+      .single()
+      .abortSignal(AbortSignal.timeout(5000))
+    if (result.error?.code === '23505') result = await update()
+  }
+  if (result.error || !result.data)
+    return response.status(result.status === 401 ? 401 : 503).json({
+      message:
+        result.status === 401
+          ? 'Your session expired. Please log in again.'
+          : 'Your profile could not be saved. Please try again.',
+    })
+  response.json(profileResponse(result.data, request))
 })
 
 app.use((request, response) => {

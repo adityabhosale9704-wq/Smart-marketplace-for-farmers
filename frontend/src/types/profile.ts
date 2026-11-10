@@ -9,3 +9,8 @@ export interface FarmerProfile {
 }
 
 export type ProfileErrors = Partial<Record<keyof FarmerProfile, string>>
+
+export interface ProfileResult {
+  profile: FarmerProfile
+  needsCompletion: boolean
+}

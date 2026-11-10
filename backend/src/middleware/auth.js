@@ -25,6 +25,9 @@ export async function requireAuth(request, response, next) {
     }
 
     request.user = { id: data.user.id, email: data.user.email ?? null }
+    request.accessToken = bearer[1]
+    request.profileFullName =
+      typeof data.user.user_metadata?.fullName === 'string' ? data.user.user_metadata.fullName : ''
   } catch {
     return response.status(503).json({ message: 'Authentication service unavailable' })
   }

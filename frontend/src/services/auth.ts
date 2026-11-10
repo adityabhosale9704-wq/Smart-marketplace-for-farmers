@@ -12,7 +12,7 @@ import supabase from './supabase'
 const configurationMessage =
   'Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY in frontend/.env, then restart Vite.'
 
-class AuthRequestError extends Error {
+export class AuthRequestError extends Error {
   status: number
 
   constructor(message: string, status: number) {
@@ -23,7 +23,7 @@ class AuthRequestError extends Error {
 
 const apiUrl = (import.meta.env.VITE_API_URL ?? 'http://127.0.0.1:5000').replace(/\/+$/, '')
 
-async function authRequest(path: string, options: RequestInit): Promise<unknown> {
+export async function authRequest(path: string, options: RequestInit): Promise<unknown> {
   let response: Response
   try {
     response = await fetch(`${apiUrl}${path}`, {
