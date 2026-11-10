@@ -119,8 +119,8 @@ export default function AddProduct() {
         <div className="page-width">
           <p className="mb-7 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
             Preview does not save a listing. Save Draft keeps it unpublished; Publish makes an
-            in-stock listing available in the database. The public Marketplace still uses
-            demonstration data.
+            in-stock listing visible in the Marketplace. Orders and purchasing are not connected
+            yet.
           </p>
           <div className="grid items-start gap-7 lg:grid-cols-[240px_minmax(0,1fr)]">
             <SellerSidebar />

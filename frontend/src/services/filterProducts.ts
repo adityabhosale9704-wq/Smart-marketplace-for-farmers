@@ -22,8 +22,11 @@ export const emptyFilters: ProductFilters = {
 
 export function priceRangeError(min: string, max: string): string | null {
   const values = [min, max].filter(value => value.trim() !== '').map(Number)
-  if (values.some(value => !Number.isFinite(value) || value < 0)) {
-    return 'Enter valid prices of zero or more.'
+  if (
+    [min, max].some(value => value.trim() && !/^\d+(?:\.\d{1,2})?$/.test(value.trim())) ||
+    values.some(value => !Number.isFinite(value) || value < 0 || value > 1000000)
+  ) {
+    return 'Use prices from zero to 1,000,000 with up to two decimal places.'
   }
   if (min.trim() !== '' && max.trim() !== '' && Number(min) > Number(max)) {
     return 'Minimum price must be less than or equal to maximum price.'

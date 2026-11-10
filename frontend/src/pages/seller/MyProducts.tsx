@@ -104,8 +104,8 @@ export default function MyProducts() {
       <main id="main-content" className="min-h-screen bg-stone-50 py-8 sm:py-12">
         <div className="page-width">
           <p className="mb-7 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
-            These listings are loaded from your farmer account. Drafts stay private. Public
-            Marketplace and order pages still use demonstration data.
+            These listings are loaded from your farmer account. Drafts stay private. Published,
+            in-stock products appear in the Marketplace. Order pages still use demonstration data.
           </p>
           <div className="grid items-start gap-7 lg:grid-cols-[240px_minmax(0,1fr)]">
             <SellerSidebar />

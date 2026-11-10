@@ -88,6 +88,93 @@ function databaseError(response, error, status) {
     .json({ message: 'The product request could not be completed. Please try again.' })
 }
 
+router.get('/', async (request, response) => {
+  response.set('Cache-Control', 'no-store')
+  const allowed = ['search', 'category', 'location', 'minPrice', 'maxPrice']
+  if (
+    Object.keys(request.query).some(key => !allowed.includes(key)) ||
+    Object.values(request.query).some(value => typeof value !== 'string')
+  )
+    return response
+      .status(400)
+      .json({ message: 'Use one text value for each supported marketplace filter.' })
+  const search = request.query.search?.trim().replace(/\s+/g, ' ') ?? ''
+  const category = request.query.category?.trim() ?? ''
+  const location = request.query.location?.trim() ?? ''
+  const minPrice = request.query.minPrice?.trim() ?? ''
+  const maxPrice = request.query.maxPrice?.trim() ?? ''
+  if (
+    search.length > 100 ||
+    location.length > 100 ||
+    /[\u0000-\u001f\u007f]/.test(search + location)
+  )
+    return response.status(400).json({
+      message:
+        'Use a product name and location of at most 100 characters without control characters.',
+    })
+  if (category && !categories.includes(category))
+    return response.status(400).json({ message: 'Choose a supported category.' })
+  if (
+    [minPrice, maxPrice].some(
+      value => value && (!/^\d+(?:\.\d{1,2})?$/.test(value) || Number(value) > 1000000),
+    ) ||
+    (minPrice && maxPrice && Number(minPrice) > Number(maxPrice))
+  )
+    return response.status(400).json({
+      message: 'Use a valid INR price range from zero to 1,000,000, with up to two decimals.',
+    })
+
+  // This public query deliberately does not forward a signed-in seller's token.
+  const client = createSupabaseClient()
+  let query = client
+    .from('products')
+    .select(
+      'id,seller_id,name,description,category,price,unit,available_quantity,city,district,state,image_path',
+    )
+    .eq('listing_status', 'published')
+    .gt('available_quantity', 0)
+  if (search) query = query.ilike('name', '%' + search.replace(/[\\%_]/g, '\\$&') + '%')
+  if (category) query = query.eq('category', category)
+  if (location) query = query.eq('city', location)
+  if (minPrice) query = query.gte('price', minPrice)
+  if (maxPrice) query = query.lte('price', maxPrice)
+  const [products, locations] = await Promise.all([
+    query.order('created_at', { ascending: false }).abortSignal(AbortSignal.timeout(5000)),
+    client
+      .from('products')
+      .select('city')
+      .eq('listing_status', 'published')
+      .gt('available_quantity', 0)
+      .abortSignal(AbortSignal.timeout(5000)),
+  ])
+  if (products.error || locations.error)
+    return response
+      .status(503)
+      .json({ message: 'Marketplace listings could not be loaded. Please try again.' })
+  const rows = products.data ?? []
+  let names = []
+  let sellerNamesAvailable = true
+  if (rows.length) {
+    const result = await client
+      .rpc('marketplace_seller_names', { seller_ids: [...new Set(rows.map(row => row.seller_id))] })
+      .abortSignal(AbortSignal.timeout(5000))
+    if (result.error) {
+      // Older deployments can still show products without exposing private profiles.
+      if (['PGRST202', '42501'].includes(result.error.code)) sellerNamesAvailable = false
+      else
+        return response
+          .status(503)
+          .json({ message: 'Marketplace seller names could not be loaded. Please try again.' })
+    } else names = result.data ?? []
+  }
+  const sellerNames = new Map(names.map(seller => [seller.seller_id, seller.full_name]))
+  response.json({
+    products: rows.map(row => ({ ...row, seller_name: sellerNames.get(row.seller_id) ?? null })),
+    locations: [...new Set((locations.data ?? []).map(row => row.city))].sort(),
+    sellerNamesAvailable,
+  })
+})
+
 router.use(requireAuth)
 router.use((request, response, next) => {
   response.set('Cache-Control', 'no-store')

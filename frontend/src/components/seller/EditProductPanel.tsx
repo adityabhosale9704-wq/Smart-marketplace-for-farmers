@@ -76,8 +76,8 @@ export default function EditProductPanel({
         Edit product listing
       </h2>
       <p className="mt-3 text-sm leading-6 text-stone-600">
-        Unit stays {listing.unit}. Saving updates your product in the database. Public Marketplace
-        integration is not available yet.
+        Unit stays {listing.unit}. Saving updates your product in the database. Published, in-stock
+        products appear in the Marketplace.
       </p>
       <form noValidate onSubmit={submit} aria-busy={saving} className="mt-5">
         <fieldset disabled={saving}>

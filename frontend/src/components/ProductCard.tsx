@@ -7,49 +7,60 @@ import MarketplaceImage from './MarketplaceImage'
 const currency = new Intl.NumberFormat('en-IN', {
   style: 'currency',
   currency: 'INR',
-  maximumFractionDigits: 0,
+  maximumFractionDigits: 2,
 })
 
 export default function ProductCard({
   product,
   navigationState,
+  demo = true,
 }: {
   product: Product
   navigationState?: ProductNavigationState
+  demo?: boolean
 }) {
   return (
     <article className="overflow-hidden rounded-2xl border border-stone-200 bg-white">
       <div className="relative">
-        <Link
-          to={`/products/${product.id}`}
-          state={navigationState}
-          aria-label={`View ${product.name} details`}
-          className="block"
-        >
+        {demo ? (
+          <Link
+            to={`/products/${product.id}`}
+            state={navigationState}
+            aria-label={`View ${product.name} details`}
+            className="block"
+          >
+            <MarketplaceImage src={product.image} alt={product.name} className="h-48 sm:h-52" />
+          </Link>
+        ) : (
           <MarketplaceImage src={product.image} alt={product.name} className="h-48 sm:h-52" />
-        </Link>
+        )}
         <span className="pointer-events-none absolute top-3 left-3 rounded-md bg-white/95 px-2.5 py-1 text-[11px] font-semibold tracking-wide text-emerald-800 capitalize">
           {product.category}
         </span>
       </div>
       <div className="p-5">
         <h3 className="text-lg font-bold tracking-tight text-stone-900">
-          <Link
-            to={`/products/${product.id}`}
-            state={navigationState}
-            className="hover:text-emerald-700 hover:underline"
-          >
-            {product.name}
-            <span className="sr-only"> - View product details</span>
-          </Link>
+          {demo ? (
+            <Link
+              to={`/products/${product.id}`}
+              state={navigationState}
+              className="hover:text-emerald-700 hover:underline"
+            >
+              {product.name}
+              <span className="sr-only"> - View product details</span>
+            </Link>
+          ) : (
+            product.name
+          )}
         </h3>
         <p className="mt-2 text-xl font-bold text-emerald-800">
           {currency.format(product.price)}
           <span className="text-sm font-normal text-stone-500"> / {product.unit}</span>
         </p>
         <p className="mt-1 text-xs text-stone-500">
-          {product.availableQuantity} {product.unit} available - sample stock
+          {product.availableQuantity} {product.unit} available{demo ? ' - sample stock' : ''}
         </p>
+        {!demo && <p className="mt-3 line-clamp-2 text-sm text-stone-600">{product.description}</p>}
         <div className="mt-4 space-y-2 border-t border-stone-100 pt-4 text-xs text-stone-600">
           <p className="flex items-center gap-2">
             <UserRound className="size-3.5 shrink-0" aria-hidden="true" />
@@ -60,6 +71,7 @@ export default function ProductCard({
             {product.location}
           </p>
         </div>
+        {!demo && <p className="mt-4 text-xs text-stone-500">Product details coming soon.</p>}
       </div>
     </article>
   )

@@ -37,7 +37,108 @@ let profileMode = 'normal'
 const productRows = new Map()
 let productMode = 'normal'
 let productCount = 0
+let publicProductMode = 'normal'
+let sellerNameMode = 'normal'
+let publicQueryCount = 0
 const database = createServer((request, response) => {
+  if (request.url === '/rest/v1/rpc/marketplace_seller_names') {
+    assert.equal(request.method, 'POST')
+    assert.ok(
+      ![`Bearer ${testToken}`, `Bearer ${loginAccessToken}`].includes(
+        request.headers.authorization,
+      ),
+    )
+    let body = ''
+    request.on('data', chunk => {
+      body += chunk
+    })
+    request.on('end', () => {
+      const { seller_ids } = JSON.parse(body)
+      assert.ok(Array.isArray(seller_ids))
+      response.setHeader('Content-Type', 'application/json')
+      if (sellerNameMode !== 'normal') {
+        response.statusCode = sellerNameMode === 'missing' ? 404 : 500
+        return response.end(
+          JSON.stringify({
+            code: sellerNameMode === 'missing' ? 'PGRST202' : 'XX000',
+            message: 'Private seller error details',
+          }),
+        )
+      }
+      const visibleSellers = new Set(
+        [...productRows.values()]
+          .filter(row => row.listing_status === 'published' && row.available_quantity > 0)
+          .map(row => row.seller_id),
+      )
+      response.end(
+        JSON.stringify(
+          seller_ids
+            .filter(id => visibleSellers.has(id))
+            .map(id => ({
+              seller_id: id,
+              full_name: id === 'verified-user' ? 'Visible Farmer' : 'Another Grower',
+            })),
+        ),
+      )
+    })
+    return
+  }
+  if (request.url.startsWith('/rest/v1/products?')) {
+    const url = new URL(request.url, 'http://localhost')
+    if (url.searchParams.get('listing_status') === 'eq.published') {
+      publicQueryCount++
+      assert.equal(request.method, 'GET')
+      assert.equal(url.searchParams.get('available_quantity'), 'gt.0')
+      assert.ok(
+        ![`Bearer ${testToken}`, `Bearer ${loginAccessToken}`].includes(
+          request.headers.authorization,
+        ),
+      )
+      assert.ok(!url.searchParams.has('or'))
+      assert.ok(!url.searchParams.has('seller_id'))
+      response.setHeader('Content-Type', 'application/json')
+      if (publicProductMode === 'error') {
+        response.statusCode = 403
+        return response.end(
+          JSON.stringify({ code: '42501', message: 'Private product error information' }),
+        )
+      }
+      let rows = [...productRows.values()].filter(
+        row => row.listing_status === 'published' && row.available_quantity > 0,
+      )
+      if (url.searchParams.get('select') === 'city')
+        return response.end(JSON.stringify(rows.map(row => ({ city: row.city }))))
+      assert.equal(
+        url.searchParams.get('select'),
+        'id,seller_id,name,description,category,price,unit,available_quantity,city,district,state,image_path',
+      )
+      if (url.searchParams.has('name')) {
+        const pattern = url.searchParams.get('name')
+        assert.ok(pattern.startsWith('ilike.%') && pattern.endsWith('%'))
+        const term = pattern
+          .slice(7, -1)
+          .replace(/\\([\\%_])/g, '$1')
+          .toLowerCase()
+        rows = rows.filter(row => row.name.toLowerCase().includes(term))
+      }
+      if (url.searchParams.has('category'))
+        rows = rows.filter(row => 'eq.' + row.category === url.searchParams.get('category'))
+      if (url.searchParams.has('city'))
+        rows = rows.filter(row => 'eq.' + row.city === url.searchParams.get('city'))
+      for (const bound of url.searchParams.getAll('price')) {
+        const amount = Number(bound.slice(4))
+        rows = rows.filter(row =>
+          bound.startsWith('gte.') ? row.price >= amount : row.price <= amount,
+        )
+      }
+      const keys = url.searchParams.get('select').split(',')
+      return response.end(
+        JSON.stringify(
+          rows.reverse().map(row => Object.fromEntries(keys.map(key => [key, row[key]]))),
+        ),
+      )
+    }
+  }
   if (request.url.startsWith('/rest/v1/products?') && !request.url.includes('select=id&limit=1')) {
     const url = new URL(request.url, 'http://localhost')
     const owner =
@@ -814,6 +915,79 @@ try {
     assert.equal((await productRequest('/mine')).status, 503)
   }
   productMode = 'normal'
+  const publicRowsBefore = JSON.stringify([...productRows.values()])
+  const publicGet = query => fetch(`${base}/api/products${query ? '?' + query : ''}`)
+  const invalidQueryCount = publicQueryCount
+  for (const query of [
+    'listing_status=draft',
+    'search=a&search=b',
+    'category=unknown',
+    'minPrice=-1',
+    'maxPrice=1.001',
+    'minPrice=100&maxPrice=10',
+    'maxPrice=1000001',
+    'location=' + 'x'.repeat(101),
+    'search=%00',
+  ]) {
+    assert.equal((await publicGet(query)).status, 400)
+  }
+  assert.equal(publicQueryCount, invalidQueryCount)
+  const publicResponse = await publicGet('')
+  assert.equal(publicResponse.status, 200)
+  assert.equal(publicResponse.headers.get('cache-control'), 'no-store')
+  const marketplace = await publicResponse.json()
+  assert.equal(marketplace.products.length, 1)
+  assert.equal(marketplace.products[0].id, publishedProduct.id)
+  assert.equal(marketplace.products[0].seller_name, 'Visible Farmer')
+  assert.equal(marketplace.sellerNamesAvailable, true)
+  assert.deepEqual(marketplace.locations, ['Pune'])
+  assert.ok(!JSON.stringify(marketplace).includes('email'))
+  assert.ok(!JSON.stringify(marketplace).includes('mobile'))
+  const asOwner = await fetch(`${base}/api/products`, {
+    headers: { Authorization: `Bearer ${testToken}` },
+  })
+  assert.deepEqual(
+    await asOwner.json(),
+    marketplace,
+    'An owner token must not broaden public visibility',
+  )
+  const filteredPublic = await publicGet(
+    'search=tOmAtO&category=vegetables&location=Pune&minPrice=32.50&maxPrice=32.50',
+  )
+  assert.equal((await filteredPublic.json()).products.length, 1)
+  for (const query of [
+    'category=fruits',
+    'location=OtherTown',
+    'minPrice=33',
+    'maxPrice=32',
+    'search=missing',
+    'search=%25',
+  ]) {
+    const result = await publicGet(query)
+    assert.equal(result.status, 200)
+    assert.deepEqual((await result.json()).products, [])
+  }
+  sellerNameMode = 'missing'
+  const missingNames = await (await publicGet('')).json()
+  assert.equal(missingNames.products.length, 1)
+  assert.equal(missingNames.products[0].seller_name, null)
+  assert.equal(missingNames.sellerNamesAvailable, false)
+  sellerNameMode = 'error'
+  assert.equal((await publicGet('')).status, 503)
+  sellerNameMode = 'normal'
+  publicProductMode = 'error'
+  const publicError = await publicGet('')
+  assert.equal(publicError.status, 503)
+  assert.ok(!(await publicError.text()).includes('Private'))
+  publicProductMode = 'normal'
+  assert.equal(
+    JSON.stringify([...productRows.values()]),
+    publicRowsBefore,
+    'Public reads must not mutate products',
+  )
+  console.log(
+    'PASS: anonymous marketplace, published/in-stock-only queries, no owner-token escalation, safe seller-name projection, combined filters, literal wildcards, invalid inputs, empty results, missing projection fallback and safe service errors. SQL/RLS execution remains untested.',
+  )
   profileRows.clear()
   profileRequests.length = 0
   console.log(

@@ -59,7 +59,8 @@ export default function FilterPanel({
             <input
               type="number"
               min="0"
-              step="any"
+              step="0.01"
+              max="1000000"
               inputMode="decimal"
               placeholder="No minimum"
               value={filters.minPrice}
@@ -74,7 +75,8 @@ export default function FilterPanel({
             <input
               type="number"
               min="0"
-              step="any"
+              step="0.01"
+              max="1000000"
               inputMode="decimal"
               placeholder="No maximum"
               value={filters.maxPrice}
@@ -92,7 +94,7 @@ export default function FilterPanel({
         )}
       </fieldset>
       <label className="block text-sm font-semibold">
-        Location
+        Village / City
         <select
           value={filters.location}
           onChange={event => onChange({ location: event.target.value })}

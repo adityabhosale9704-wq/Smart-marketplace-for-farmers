@@ -3,6 +3,69 @@ import { categoryOptions } from '../data/categories'
 import { productUnits } from '../types/productForm'
 import type { ProductFormValues } from '../types/productForm'
 import type { SellerListingSummary, SellerProductEditValues } from '../types/seller'
+import type { Product } from '../types/product'
+import type { ProductFilters } from './filterProducts'
+
+export async function getMarketplaceProducts(
+  filters: ProductFilters,
+  signal?: AbortSignal,
+): Promise<{
+  products: Product[]
+  locations: string[]
+  sellerNamesAvailable: boolean
+}> {
+  const params = new URLSearchParams()
+  for (const [key, value] of Object.entries(filters))
+    if (value.trim()) params.set(key, value.trim())
+  const data = await authRequest('/api/products?' + params.toString(), { method: 'GET', signal })
+  if (
+    !data ||
+    typeof data !== 'object' ||
+    !('products' in data) ||
+    !Array.isArray(data.products) ||
+    !('locations' in data) ||
+    !Array.isArray(data.locations) ||
+    !data.locations.every(value => typeof value === 'string') ||
+    !('sellerNamesAvailable' in data) ||
+    typeof data.sellerNamesAvailable !== 'boolean'
+  )
+    throw new Error('The marketplace response was incomplete. Please try again.')
+  const products = data.products.map((value: unknown): Product => {
+    if (!value || typeof value !== 'object')
+      throw new Error('A marketplace product was incomplete.')
+    const row = value as Record<string, unknown>
+    const strings = ['id', 'name', 'description', 'city', 'district', 'state']
+    if (
+      !strings.every(field => typeof row[field] === 'string') ||
+      !categoryOptions.some(category => category.id === row.category) ||
+      !productUnits.includes(row.unit as 'kg' | 'quintal') ||
+      typeof row.price !== 'number' ||
+      !Number.isFinite(row.price) ||
+      row.price <= 0 ||
+      typeof row.available_quantity !== 'number' ||
+      !Number.isFinite(row.available_quantity) ||
+      row.available_quantity <= 0 ||
+      !(row.seller_name === null || typeof row.seller_name === 'string')
+    )
+      throw new Error('A marketplace product was incomplete.')
+    return {
+      id: row.id as string,
+      name: row.name as string,
+      description: row.description as string,
+      category: row.category as Product['category'],
+      price: row.price,
+      unit: row.unit as Product['unit'],
+      availableQuantity: row.available_quantity,
+      location: [row.city, row.district, row.state].filter(Boolean).join(', '),
+      seller:
+        typeof row.seller_name === 'string' && row.seller_name.trim()
+          ? row.seller_name
+          : 'Seller name not provided',
+      image: '', // Storage and uploaded images are not integrated yet.
+    }
+  })
+  return { products, locations: data.locations, sellerNamesAvailable: data.sellerNamesAvailable }
+}
 
 async function productRequest(
   path: string,

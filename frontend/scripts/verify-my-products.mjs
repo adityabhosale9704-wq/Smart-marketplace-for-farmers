@@ -272,6 +272,116 @@ try {
   assert.ok(!pageSource.includes('mockSellerListings'))
   assert.match(pageSource, /await updateProduct/)
   assert.match(pageSource, /await getMyProducts/)
+  const { getMarketplaceProducts } = await load('services/products.ts')
+  const publicFilters = {
+    search: '  tomatoes  ',
+    category: 'vegetables',
+    location: 'Pune',
+    minPrice: '10.25',
+    maxPrice: '50',
+  }
+  const publicRow = {
+    ...row,
+    description: 'Freshly picked tomatoes.',
+    city: 'Pune',
+    district: 'Pune',
+    state: 'Maharashtra',
+    seller_name: 'Published Farmer',
+  }
+  const publicData = { products: [publicRow], locations: ['Pune'], sellerNamesAvailable: true }
+  globalThis.fetch = async (url, options) => {
+    const address = new URL(url)
+    assert.equal(address.pathname, '/api/products')
+    assert.equal(address.searchParams.get('search'), 'tomatoes')
+    assert.equal(address.searchParams.get('minPrice'), '10.25')
+    assert.equal(address.searchParams.get('category'), 'vegetables')
+    assert.equal(address.searchParams.get('location'), 'Pune')
+    assert.equal(options.method, 'GET')
+    assert.equal(options.headers, undefined, 'Marketplace requests must not attach authentication')
+    return reply(publicData)
+  }
+  const publicProducts = await getMarketplaceProducts(publicFilters)
+  assert.equal(publicProducts.products[0].seller, 'Published Farmer')
+  assert.equal(publicProducts.products[0].location, 'Pune, Pune, Maharashtra')
+  assert.equal(publicProducts.products[0].image, '')
+  const { default: Card } = await load('components/ProductCard.tsx')
+  const realCard = render(createElement(Card, { product: publicProducts.products[0], demo: false }))
+  assert.match(realCard, /Published Farmer/)
+  assert.match(realCard, /32.50/)
+  assert.match(realCard, /Freshly picked tomatoes/)
+  assert.ok(!realCard.includes('sample stock'))
+  assert.ok(!realCard.includes('href="/products/'))
+  assert.ok(!realCard.includes('<img'), 'A missing image must render the existing placeholder')
+  globalThis.fetch = async () => reply({ products: [], locations: [], sellerNamesAvailable: true })
+  assert.deepEqual((await getMarketplaceProducts(publicFilters)).products, [])
+  globalThis.fetch = async () =>
+    reply({
+      ...publicData,
+      products: [{ ...publicRow, seller_name: null }],
+      sellerNamesAvailable: false,
+    })
+  assert.equal(
+    (await getMarketplaceProducts(publicFilters)).products[0].seller,
+    'Seller name not provided',
+  )
+  globalThis.fetch = async () => reply({ message: 'Marketplace unavailable' }, 503)
+  await assert.rejects(getMarketplaceProducts(publicFilters), /Marketplace unavailable/)
+  globalThis.fetch = async () => {
+    throw new Error('Private network error')
+  }
+  await assert.rejects(getMarketplaceProducts(publicFilters), /Cannot reach/)
+  globalThis.fetch = async () => reply({})
+  await assert.rejects(getMarketplaceProducts(publicFilters), /marketplace response was incomplete/)
+  const { default: Marketplace } = await load('pages/Marketplace.tsx')
+  assert.match(render(createElement(Marketplace)), /Loading marketplace listings/)
+  const renderMarketplaceAt = path =>
+    renderToStaticMarkup(
+      createElement(
+        CartContext.Provider,
+        { value: context },
+        createElement(MemoryRouter, { initialEntries: [path] }, createElement(Marketplace)),
+      ),
+    )
+  for (let refresh = 0; refresh < 2; refresh++) {
+    const refreshed = renderMarketplaceAt(
+      '/marketplace?search=tomatoes&category=vegetables&location=Pune&minPrice=10.25&maxPrice=50',
+    )
+    assert.match(refreshed, /value="tomatoes"/)
+    assert.match(refreshed, /value="10.25"/)
+    assert.match(refreshed, /value="50"/)
+    const selectedCategory = refreshed.match(/<input[^>]*value="vegetables"[^>]*>/)?.[0]
+    assert.match(selectedCategory, /checked=""/)
+  }
+  assert.match(
+    renderMarketplaceAt('/marketplace?minPrice=100&maxPrice=10'),
+    /Check your price filters/,
+  )
+  const { priceRangeError } = await load('services/filterProducts.ts')
+  for (const min of ['-1', '1.001', '1e3', '1000001']) assert.ok(priceRangeError(min, ''))
+  assert.equal(priceRangeError('0', '32.50'), null)
+  const marketplaceSource = await readFile(
+    new URL('../src/pages/Marketplace.tsx', import.meta.url),
+    'utf8',
+  )
+  assert.ok(!marketplaceSource.includes('mockProducts'))
+  assert.match(marketplaceSource, /No products found/)
+  assert.match(marketplaceSource, /role="alert"/)
+  assert.match(marketplaceSource, /controller.abort\(\)/)
+  const sql = await readFile(
+    new URL(
+      '../../supabase/migrations/20261110010000_add_marketplace_seller_names.sql',
+      import.meta.url,
+    ),
+    'utf8',
+  )
+  assert.match(sql, /SECURITY DEFINER/)
+  assert.match(sql, /SET search_path = ''/)
+  assert.match(sql, /products.listing_status = 'published'/)
+  assert.match(sql, /products.available_quantity > 0/)
+  assert.ok(!/mobile|email|DISABLE ROW LEVEL SECURITY|GRANT SELECT ON/i.test(sql))
+  console.log(
+    'PASS: public marketplace service/filter parameters, no tokens, real cards, decimal prices, image fallback, no demo-detail links, loading markup and empty/error responses. Name-projection SQL reviewed statically only; browser effect interactions remain manual.',
+  )
   console.log(
     'PASS: mocked real-product POST/GET/PUT requests, decimal strings, no images or seller IDs submitted, account/token checks, API/network errors, empty lists, owned-row projection and saved-list rendering. Navigation wiring checked statically; no hosted products created.',
   )

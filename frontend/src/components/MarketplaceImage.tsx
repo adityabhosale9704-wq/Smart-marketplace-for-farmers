@@ -16,7 +16,7 @@ export default function MarketplaceImage({
 
   return (
     <div className={`overflow-hidden bg-emerald-50 ${className}`}>
-      {failedSrc === src ? (
+      {!src || failedSrc === src ? (
         <div
           role="img"
           aria-label={alt}
