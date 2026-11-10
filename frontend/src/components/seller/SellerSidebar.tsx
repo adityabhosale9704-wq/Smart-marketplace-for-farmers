@@ -6,9 +6,9 @@ export default function SellerSidebar() {
     <aside className="min-w-0 rounded-2xl border border-stone-200 bg-white p-4 lg:sticky lg:top-28">
       <details open className="group">
         <summary className="cursor-pointer text-sm font-bold text-emerald-950">
-          Seller preview navigation
+          Seller navigation
         </summary>
-        <nav aria-label="Seller preview" className="mt-5 space-y-2">
+        <nav aria-label="Seller navigation" className="mt-5 space-y-2">
           <NavLink
             to="/seller/dashboard"
             className={({ isActive }) =>
@@ -55,8 +55,8 @@ export default function SellerSidebar() {
         </nav>
       </details>
       <p className="mt-4 border-t border-stone-100 pt-4 text-xs leading-6 text-stone-500">
-        Public demonstration. No farmer is signed in. One future account will support buying and
-        selling.
+        Add Product and My Products use your signed-in farmer account. Dashboard figures and order
+        pages remain demonstration previews.
       </p>
     </aside>
   )

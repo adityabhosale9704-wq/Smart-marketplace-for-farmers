@@ -64,8 +64,8 @@ export default function ProductForm({
       className="rounded-2xl border border-stone-200 bg-white p-5 sm:p-7"
     >
       <p className="text-sm leading-6 text-stone-600">
-        Required fields are marked *. Enter sample information to review a product. No listing is
-        saved.
+        Required fields are marked *. Preview your details, then choose Save Draft or Publish on the
+        review screen.
       </p>
       {Object.values(errors).some(Boolean) && (
         <p role="alert" className="mt-5 rounded-lg bg-red-50 p-3 text-sm text-red-800">

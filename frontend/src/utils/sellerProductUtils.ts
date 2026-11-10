@@ -55,9 +55,8 @@ export function sellerEditValues(listing: SellerListingSummary): SellerProductEd
 export function validateSellerEdit(values: SellerProductEditValues): SellerProductEditErrors {
   const errors: SellerProductEditErrors = {}
   const name = values.name.trim()
-  if (!name || name.length > 100 || !/[\p{L}\p{N}]/u.test(name))
-    errors.name =
-      'Enter a product name containing letters or numbers, using at most 100 characters.'
+  if (name.length < 3 || name.length > 100 || !/[\p{L}\p{N}]/u.test(name))
+    errors.name = 'Enter a product name of 3–100 characters containing letters or numbers.'
   for (const field of ['price', 'stock'] as const) {
     const text = values[field].trim()
     const amount = Number(text)
@@ -74,7 +73,7 @@ export function validateSellerEdit(values: SellerProductEditValues): SellerProdu
     }
   }
   if (!sellerProductStatuses.includes(values.status))
-    errors.status = 'Choose a supported demonstration status.'
+    errors.status = 'Choose a supported listing status.'
   else if (!errors.stock && values.status === 'Active' && Number(values.stock) === 0)
     errors.status = 'Active requires stock above zero. Choose Out of Stock or Draft.'
   else if (!errors.stock && values.status === 'Out of Stock' && Number(values.stock) > 0)

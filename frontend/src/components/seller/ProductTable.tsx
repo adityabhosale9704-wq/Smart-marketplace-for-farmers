@@ -19,7 +19,7 @@ export default function ProductTable({
   if (listings.length === 0)
     return (
       <section className="rounded-2xl border border-dashed border-stone-300 bg-white p-8 text-center">
-        <h2 className="text-xl font-bold">No demonstration products found</h2>
+        <h2 className="text-xl font-bold">No products found</h2>
         <p className="mt-3 text-sm text-stone-600">
           Try another name, category, or listing status.
         </p>
@@ -30,7 +30,7 @@ export default function ProductTable({
     )
   return (
     <section
-      aria-label="Demonstration product listings"
+      aria-label="Your product listings"
       className="min-w-0 rounded-2xl border border-stone-200 bg-white p-4 sm:p-5"
     >
       <div
@@ -64,7 +64,8 @@ export default function ProductTable({
               </p>
               {listing.availableQuantity === 0 ? (
                 <p className="mt-1 text-xs text-red-700">Zero stock</p>
-              ) : listing.availableQuantity <= listing.lowStockThreshold ? (
+              ) : listing.lowStockThreshold !== undefined &&
+                listing.availableQuantity <= listing.lowStockThreshold ? (
                 <p className="mt-1 text-xs text-amber-800">Low stock</p>
               ) : null}
             </div>
@@ -72,7 +73,7 @@ export default function ProductTable({
             <button
               id={'edit-' + listing.id}
               onClick={() => onEdit(listing.id)}
-              aria-label={`View or edit demonstration listing ${listing.name}`}
+              aria-label={`View or edit listing ${listing.name}`}
               className="w-fit rounded-lg border border-emerald-700 px-3 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-50"
             >
               View / Edit

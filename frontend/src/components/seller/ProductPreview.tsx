@@ -14,15 +14,19 @@ export default function ProductPreview({
   values,
   image,
   onEdit,
+  onSave,
+  saving = false,
 }: {
   values: ProductFormValues
   image: ProductImageSelection | null
   onEdit: () => void
+  onSave?: (status: 'draft' | 'published') => void
+  saving?: boolean
 }) {
   return (
     <section className="min-w-0 rounded-2xl border border-stone-200 bg-white p-5 sm:p-7">
       <p className="rounded-lg bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-950">
-        Demonstration preview only. The product has not been saved or published.
+        Preview only. This product is not saved yet. Choose Save Draft or Publish to save it.
       </p>
       {image ? (
         <MarketplaceImage
@@ -58,13 +62,31 @@ export default function ProductPreview({
         <p className="mt-3 text-sm text-stone-600">Harvest date: {values.harvestDate}</p>
       )}
       <div className="mt-7 flex flex-wrap gap-4">
-        <button onClick={onEdit} className="button-secondary">
+        <button disabled={saving} onClick={onEdit} className="button-secondary">
           Edit Details
         </button>
         <Link to="/seller/dashboard" className="button-primary">
           Back to Seller Dashboard
         </Link>
+        {onSave && (
+          <>
+            <button disabled={saving} onClick={() => onSave('draft')} className="button-secondary">
+              {saving ? 'Saving...' : 'Save Draft'}
+            </button>
+            <button
+              disabled={saving}
+              onClick={() => onSave('published')}
+              className="button-primary"
+            >
+              Publish
+            </button>
+          </>
+        )}
       </div>
+      <p className="mt-5 text-xs text-stone-600">
+        Selected images are local previews only. Products are saved without an uploaded image in
+        this step.
+      </p>
     </section>
   )
 }

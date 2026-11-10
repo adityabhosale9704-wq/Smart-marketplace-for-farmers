@@ -2,6 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import supabase, { createSupabaseClient } from './config/supabase.js'
 import { requireAuth } from './middleware/auth.js'
+import productRoutes from './routes/products.js'
 
 const app = express()
 const frontendOrigin = process.env.FRONTEND_ORIGIN ?? 'http://127.0.0.1:5173'
@@ -368,6 +369,8 @@ app.put('/api/profile', requireAuth, async (request, response) => {
     })
   response.json(profileResponse(result.data, request))
 })
+
+app.use('/api/products', productRoutes)
 
 app.use((request, response) => {
   response.status(404).json({ message: 'Route not found' })

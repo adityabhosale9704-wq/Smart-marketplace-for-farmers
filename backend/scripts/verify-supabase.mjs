@@ -34,7 +34,93 @@ const loginRefreshToken = 'login-test-refresh-token-placeholder'
 const profileRows = new Map()
 const profileRequests = []
 let profileMode = 'normal'
+const productRows = new Map()
+let productMode = 'normal'
+let productCount = 0
 const database = createServer((request, response) => {
+  if (request.url.startsWith('/rest/v1/products?') && !request.url.includes('select=id&limit=1')) {
+    const url = new URL(request.url, 'http://localhost')
+    const owner =
+      request.headers.authorization === `Bearer ${testToken}` ? 'verified-user' : 'login-user'
+    assert.ok(
+      [`Bearer ${testToken}`, `Bearer ${loginAccessToken}`].includes(request.headers.authorization),
+    )
+    assert.equal(request.headers.apikey, 'sb_publishable_test_placeholder')
+    if (request.method !== 'POST') assert.equal(url.searchParams.get('seller_id'), `eq.${owner}`)
+    productCount++
+    if (productMode === 'network-error') return request.socket.destroy()
+    response.setHeader('Content-Type', 'application/json')
+    if (productMode === 'error') {
+      response.statusCode = 403
+      return response.end(
+        JSON.stringify({ code: '42501', message: 'Private product database details' }),
+      )
+    }
+    let rows = [...productRows.values()].filter(row => row.seller_id === owner)
+    const id = url.searchParams.get('id')?.slice(3)
+    if (id) rows = rows.filter(row => row.id === id)
+    if (request.method === 'GET') {
+      if (!id) assert.equal(url.searchParams.get('order'), 'created_at.desc')
+      return response.end(JSON.stringify(rows.reverse()))
+    }
+    let body = ''
+    request.on('data', chunk => {
+      body += chunk
+    })
+    request.on('end', () => {
+      const values = JSON.parse(body)
+      assert.equal(typeof values.price, 'string')
+      assert.equal(typeof values.available_quantity, 'string')
+      assert.ok(!('image_path' in values))
+      if (request.method === 'POST') {
+        assert.equal(values.seller_id, owner)
+        assert.ok(profileRows.has(owner))
+        assert.deepEqual(
+          Object.keys(values).sort(),
+          [
+            'seller_id',
+            'name',
+            'category',
+            'description',
+            'price',
+            'unit',
+            'available_quantity',
+            'city',
+            'district',
+            'state',
+            'harvest_date',
+            'listing_status',
+          ].sort(),
+        )
+        const id = '00000000-0000-4000-8000-' + String(productRows.size + 1).padStart(12, '0')
+        const row = {
+          ...values,
+          id,
+          image_path: null,
+          created_at: new Date(productRows.size * 1000).toISOString(),
+          price: Number(values.price),
+          available_quantity: Number(values.available_quantity),
+        }
+        productRows.set(id, row)
+        return response.end(JSON.stringify(row))
+      }
+      assert.equal(request.method, 'PATCH')
+      assert.deepEqual(
+        Object.keys(values).sort(),
+        ['name', 'price', 'available_quantity', 'listing_status'].sort(),
+      )
+      if (!rows.length) return response.end('[]')
+      const row = {
+        ...rows[0],
+        ...values,
+        price: Number(values.price),
+        available_quantity: Number(values.available_quantity),
+      }
+      productRows.set(row.id, row)
+      response.end(JSON.stringify([row]))
+    })
+    return
+  }
   if (request.url.startsWith('/rest/v1/profiles?')) {
     const url = new URL(request.url, 'http://localhost')
     const owner =
@@ -43,7 +129,11 @@ const database = createServer((request, response) => {
       [`Bearer ${testToken}`, `Bearer ${loginAccessToken}`].includes(request.headers.authorization),
     )
     assert.equal(request.headers.apikey, 'sb_publishable_test_placeholder')
-    assert.equal(url.searchParams.get('select'), 'full_name,mobile,city,district,state,pin_code')
+    assert.ok(
+      ['id', 'full_name,mobile,city,district,state,pin_code'].includes(
+        url.searchParams.get('select'),
+      ),
+    )
     if (request.method !== 'POST') assert.equal(url.searchParams.get('id'), `eq.${owner}`)
     profileRequests.push({ owner, method: request.method })
     if (profileMode === 'network-error') return request.socket.destroy()
@@ -54,6 +144,8 @@ const database = createServer((request, response) => {
         JSON.stringify({ code: '42501', message: 'Private database information' }),
       )
     }
+    if (request.method === 'GET' && url.searchParams.get('select') === 'id')
+      return response.end(JSON.stringify(profileRows.has(owner) ? [{ id: owner }] : []))
     if (request.method === 'GET')
       return response.end(JSON.stringify(profileRows.has(owner) ? [profileRows.get(owner)] : []))
     let body = ''
@@ -605,6 +697,128 @@ try {
     'PASS: recovery validation, isolated client, redirect URL, generic account privacy, rate limits and safe service/network errors. No real emails sent.',
   )
   const missingRoute = await fetch(`${base}/api/missing`)
+  authMode = 'valid'
+  const productRequest = (path, method = 'GET', body, token = testToken) =>
+    fetch(`${base}/api/products${path}`, {
+      method,
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    })
+  const validProduct = {
+    name: 'Fresh Tomatoes',
+    category: 'vegetables',
+    description: 'Freshly harvested tomatoes from our farm.',
+    price: '32.50',
+    unit: 'kg',
+    stock: '125.25',
+    city: 'Pune',
+    district: 'Pune',
+    state: 'Maharashtra',
+    harvestDate: '',
+    listingStatus: 'draft',
+  }
+  assert.equal((await fetch(`${base}/api/products`, { method: 'POST' })).status, 401)
+  assert.equal((await productRequest('/mine', 'GET', undefined, 'invalid-token')).status, 401)
+  assert.equal(
+    (await productRequest('/00000000-0000-4000-8000-000000000001', 'PUT', {}, 'invalid-token'))
+      .status,
+    401,
+  )
+  profileRows.delete('verified-user')
+  assert.equal((await productRequest('', 'POST', validProduct)).status, 409)
+  const beforeInvalidProducts = productCount
+  for (const input of [
+    {},
+    null,
+    [],
+    { ...validProduct, seller_id: 'other' },
+    { ...validProduct, image_path: 'invented/path.jpg' },
+    { ...validProduct, name: 'AB' },
+    { ...validProduct, category: 'unsupported' },
+    { ...validProduct, unit: 'litre' },
+    { ...validProduct, description: 'short' },
+    { ...validProduct, price: '1.001' },
+    { ...validProduct, price: '0' },
+    { ...validProduct, price: 32.5 },
+    { ...validProduct, stock: '-1' },
+    { ...validProduct, stock: '1000001' },
+    { ...validProduct, city: '' },
+    { ...validProduct, harvestDate: '2026-02-30' },
+    { ...validProduct, harvestDate: '9999-01-01' },
+    { ...validProduct, listingStatus: 'active' },
+    { ...validProduct, listingStatus: 'published', stock: '0' },
+  ]) {
+    assert.equal((await productRequest('', 'POST', input)).status, 400)
+  }
+  assert.equal(productCount, beforeInvalidProducts)
+  profileRows.set('verified-user', { id: 'verified-user' })
+  profileRows.set('login-user', { id: 'login-user' })
+  assert.deepEqual(await (await productRequest('/mine')).json(), [])
+  const draftResponse = await productRequest('', 'POST', { ...validProduct, stock: '0' })
+  assert.equal(draftResponse.status, 201)
+  const draftProduct = await draftResponse.json()
+  assert.equal(draftProduct.seller_id, 'verified-user')
+  assert.equal(draftProduct.listing_status, 'draft')
+  assert.equal(draftProduct.image_path, null)
+  const publishedResponse = await productRequest('', 'POST', {
+    ...validProduct,
+    listingStatus: 'published',
+  })
+  assert.equal(publishedResponse.status, 201)
+  const publishedProduct = await publishedResponse.json()
+  assert.equal(publishedProduct.price, 32.5)
+  assert.equal(publishedProduct.available_quantity, 125.25)
+  const otherResponse = await productRequest('', 'POST', validProduct, loginAccessToken)
+  assert.equal(otherResponse.status, 201)
+  const otherProduct = await otherResponse.json()
+  const ownProducts = await (await productRequest('/mine?seller_id=login-user')).json()
+  assert.equal(ownProducts.length, 2)
+  assert.equal(ownProducts[0].id, publishedProduct.id)
+  assert.ok(ownProducts.every(row => row.seller_id === 'verified-user'))
+  const editProduct = {
+    name: 'Updated Tomatoes',
+    price: '42.10',
+    stock: '3.25',
+    listingStatus: 'published',
+  }
+  assert.equal((await productRequest('/' + otherProduct.id, 'PUT', editProduct)).status, 404)
+  assert.equal(
+    (await productRequest('/' + draftProduct.id, 'PUT', { ...editProduct, seller_id: 'other' }))
+      .status,
+    400,
+  )
+  assert.equal(
+    (await productRequest('/' + draftProduct.id, 'PUT', { ...editProduct, unit: 'quintal' }))
+      .status,
+    400,
+  )
+  assert.equal(
+    (await productRequest('/' + draftProduct.id, 'PUT', { ...editProduct, stock: '0' })).status,
+    400,
+  )
+  const editedProduct = await productRequest('/' + draftProduct.id, 'PUT', editProduct)
+  assert.equal(editedProduct.status, 200)
+  assert.equal((await editedProduct.json()).unit, 'kg')
+  const outOfStock = await productRequest('/' + draftProduct.id, 'PUT', {
+    ...editProduct,
+    stock: '0',
+  })
+  assert.equal(outOfStock.status, 200)
+  assert.equal((await outOfStock.json()).listing_status, 'published')
+  for (productMode of ['error', 'network-error']) {
+    const failed = await productRequest('', 'POST', validProduct)
+    assert.equal(failed.status, 503)
+    const text = await failed.text()
+    assert.ok(!text.includes('Private'))
+    if (productMode === 'error') assert.match(text, /migration/)
+    assert.equal((await productRequest('/mine')).status, 503)
+  }
+  productMode = 'normal'
+  profileRows.clear()
+  profileRequests.length = 0
+  console.log(
+    'PASS: mocked product creation/list/update, JWT-derived ownership, profile requirement, exact decimal-string writes, validation, draft/publish/zero-stock rules, null image paths and actionable permission errors. No live products or SQL were written.',
+  )
   authMode = 'valid'
   const profileRequest = (method = 'GET', body, token = testToken, query = '') =>
     fetch(`${base}/api/profile${query}`, {

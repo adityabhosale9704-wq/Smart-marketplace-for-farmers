@@ -7,7 +7,7 @@ export interface SellerListingSummary {
   price: number
   unit: Product['unit']
   availableQuantity: number
-  lowStockThreshold: number
+  lowStockThreshold?: number
   published: boolean
 }
 

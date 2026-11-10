@@ -29,7 +29,9 @@ const currency = new Intl.NumberFormat('en-IN', {
 export default function SellerDashboard() {
   const stats = deriveSellerStatistics(mockSellerListings, mockSellerOrders)
   const lowStock = mockSellerListings.filter(
-    listing => listing.availableQuantity <= listing.lowStockThreshold,
+    listing =>
+      listing.lowStockThreshold !== undefined &&
+      listing.availableQuantity <= listing.lowStockThreshold,
   )
   return (
     <>
@@ -38,8 +40,8 @@ export default function SellerDashboard() {
         <div className="page-width">
           <div className="mb-7 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
             <strong>Demonstration preview - accessible without login.</strong> All listings, orders,
-            and figures below are fictional. No authenticated farmer, real sales, or inventory
-            operations are represented.
+            and figures below are fictional. Use Add Product and My Products to manage your saved
+            listings.
           </div>
           <div className="grid items-start gap-7 lg:grid-cols-[240px_minmax(0,1fr)]">
             <SellerSidebar />
