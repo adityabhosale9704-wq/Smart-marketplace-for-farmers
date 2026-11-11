@@ -3,6 +3,7 @@ import { createServer } from 'node:http'
 import { spawn, spawnSync } from 'node:child_process'
 import { once } from 'node:events'
 import { setTimeout } from 'node:timers/promises'
+import { readFile } from 'node:fs/promises'
 
 // This local HTTP fixture never contacts Supabase or uses real credentials.
 let mode = 'empty'
@@ -40,7 +41,45 @@ let productCount = 0
 let publicProductMode = 'normal'
 let sellerNameMode = 'normal'
 let publicQueryCount = 0
+const adminRoles = new Map()
+let adminRoleMode = 'normal'
+let adminCountsMode = 'normal'
+let adminRpcCount = 0
+let revokeBeforeCounts = false
 const database = createServer((request, response) => {
+  if (request.url === '/rest/v1/rpc/admin_dashboard_counts') {
+    assert.equal(request.method, 'POST')
+    assert.ok(
+      [`Bearer ${testToken}`, `Bearer ${loginAccessToken}`].includes(request.headers.authorization),
+    )
+    const owner =
+      request.headers.authorization === `Bearer ${testToken}` ? 'verified-user' : 'login-user'
+    adminRpcCount++
+    response.setHeader('Content-Type', 'application/json')
+    if (revokeBeforeCounts) {
+      adminRoles.delete(owner)
+      revokeBeforeCounts = false
+    }
+    if (adminRoles.get(owner) !== 'admin') {
+      response.statusCode = 403
+      return response.end(
+        JSON.stringify({ code: '42501', message: 'Private admin database details' }),
+      )
+    }
+    if (adminCountsMode === 'error') {
+      response.statusCode = 503
+      return response.end(
+        JSON.stringify({ code: 'XX000', message: 'Private admin database details' }),
+      )
+    }
+    return response.end(
+      JSON.stringify(
+        adminCountsMode === 'invalid'
+          ? { users_count: -1 }
+          : { users_count: 7, products_count: productRows.size, orders_count: 0 },
+      ),
+    )
+  }
   if (request.url === '/rest/v1/rpc/marketplace_seller_names') {
     assert.equal(request.method, 'POST')
     assert.ok(
@@ -231,7 +270,7 @@ const database = createServer((request, response) => {
     )
     assert.equal(request.headers.apikey, 'sb_publishable_test_placeholder')
     assert.ok(
-      ['id', 'full_name,mobile,city,district,state,pin_code'].includes(
+      ['id', 'role', 'full_name,mobile,city,district,state,pin_code'].includes(
         url.searchParams.get('select'),
       ),
     )
@@ -243,6 +282,18 @@ const database = createServer((request, response) => {
       response.statusCode = profileMode === 'expired' ? 401 : 403
       return response.end(
         JSON.stringify({ code: '42501', message: 'Private database information' }),
+      )
+    }
+    if (request.method === 'GET' && url.searchParams.get('select') === 'role') {
+      if (adminRoleMode === 'missing') {
+        response.statusCode = 400
+        return response.end(
+          JSON.stringify({ code: '42703', message: 'Private migration error details' }),
+        )
+      }
+      if (adminRoleMode === 'network-error') return request.socket.destroy()
+      return response.end(
+        JSON.stringify(profileRows.has(owner) ? [{ role: adminRoles.get(owner) ?? 'farmer' }] : []),
       )
     }
     if (request.method === 'GET' && url.searchParams.get('select') === 'id')
@@ -434,7 +485,11 @@ const database = createServer((request, response) => {
               ? 'second-verified-user'
               : 'verified-user',
         email: 'farmer@example.com',
-        user_metadata: { private: 'must not be returned', fullName: 'Registered Farmer' },
+        user_metadata: {
+          private: 'must not be returned',
+          fullName: 'Registered Farmer',
+          role: 'admin',
+        },
       }),
     )
   }
@@ -1040,6 +1095,7 @@ try {
     { ...ownProfile, userId: 'another-user' },
     { ...ownProfile, email: 'changed@example.com' },
     { ...ownProfile, sellerId: 'other' },
+    { ...ownProfile, role: 'admin' },
     { ...ownProfile, fullName: 42 },
     { ...ownProfile, fullName: 'A' },
     { ...ownProfile, fullName: '1234' },
@@ -1210,6 +1266,87 @@ try {
   )
   console.log(
     'PASS: login input validation, session response, generic invalid/unconfirmed credentials, rate limits, service/network failures, malformed sessions, Bearer compatibility and no session/token leakage.',
+  )
+  authMode = 'valid'
+  const adminGet = (path, token = testToken) =>
+    fetch(`${base}/api/admin${path}`, { headers: { Authorization: `Bearer ${token}` } })
+  for (const path of ['/me', '/dashboard']) {
+    assert.equal((await fetch(`${base}/api/admin${path}`)).status, 401)
+    assert.equal((await adminGet(path, 'invalid-token')).status, 401)
+    assert.equal(
+      (await adminGet(path)).status,
+      403,
+      'Auth metadata role claims must not grant admin access',
+    )
+  }
+  assert.equal(adminRpcCount, 0, 'Ordinary requests must not reach the count function')
+  profileRows.delete('verified-user')
+  assert.equal((await adminGet('/me')).status, 403)
+  profileRows.set('verified-user', { id: 'verified-user' })
+  adminRoleMode = 'missing'
+  const missingAdminMigration = await adminGet('/dashboard')
+  assert.equal(missingAdminMigration.status, 503)
+  assert.match((await missingAdminMigration.json()).message, /migration/)
+  adminRoleMode = 'network-error'
+  assert.equal((await adminGet('/dashboard')).status, 503)
+  adminRoleMode = 'normal'
+  adminRoles.set('verified-user', 'admin')
+  const adminIdentity = await adminGet('/me')
+  assert.equal(adminIdentity.status, 200)
+  assert.deepEqual(await adminIdentity.json(), {
+    id: 'verified-user',
+    email: 'farmer@example.com',
+    role: 'admin',
+  })
+  const dashboard = await adminGet('/dashboard')
+  assert.equal(dashboard.status, 200)
+  assert.equal(dashboard.headers.get('cache-control'), 'no-store')
+  assert.deepEqual(await dashboard.json(), { users: 7, products: productRows.size, orders: 0 })
+  assert.equal(
+    (await adminGet('/dashboard?userId=verified-user&role=admin', loginAccessToken)).status,
+    403,
+  )
+  revokeBeforeCounts = true
+  assert.equal(
+    (await adminGet('/dashboard')).status,
+    403,
+    'The database function must recheck authorization after middleware',
+  )
+  assert.equal((await adminGet('/me')).status, 403)
+  adminRoles.set('verified-user', 'admin')
+  for (adminCountsMode of ['error', 'invalid']) {
+    const response = await adminGet('/dashboard')
+    assert.equal(response.status, 503)
+    assert.ok(!(await response.text()).includes('Private'))
+  }
+  adminCountsMode = 'normal'
+  signupMode = 'confirmation'
+  const registrationWithRole = await fetch(`${base}/api/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...registration, role: 'admin' }),
+  })
+  assert.equal(registrationWithRole.status, 200)
+  assert.equal(adminRoles.has('login-user'), false)
+  const sql = await readFile(
+    new URL(
+      '../../supabase/migrations/20261110020000_add_admin_authorization.sql',
+      import.meta.url,
+    ),
+    'utf8',
+  )
+  assert.match(sql, /DEFAULT 'farmer'/)
+  assert.match(sql, /REVOKE INSERT, UPDATE ON public.profiles FROM public, anon, authenticated/)
+  assert.ok(!sql.match(/GRANT INSERT \(([^)]+)\)/)[1].includes('role'))
+  assert.ok(!sql.match(/GRANT UPDATE \(([^)]+)\)/)[1].includes('role'))
+  assert.match(sql, /profiles.id = \(SELECT auth.uid\(\)\)/)
+  assert.ok(sql.indexOf("profiles.role = 'admin'") < sql.indexOf('RETURN QUERY'))
+  assert.match(sql, /SECURITY DEFINER/)
+  assert.match(sql, /SET search_path = ''/)
+  assert.ok(!/DISABLE ROW LEVEL SECURITY|GRANT ALL|TO anon/.test(sql))
+  assert.ok(!output.includes('Private admin'))
+  console.log(
+    'PASS: mocked admin JWT/role gates, forged metadata rejection, missing-profile/migration handling, counts, role revocation, safe errors and registration/profile escalation checks. SQL privileges reviewed statically only; no real admin was assigned or verified.',
   )
 } finally {
   if (backend.exitCode === null) {

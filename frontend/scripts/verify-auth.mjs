@@ -172,7 +172,7 @@ try {
     assert.match(html, /href="\/login"/)
     assert.match(html, /href="\/register"/)
     const source = await readFile(new URL('../src/pages/' + file + '.tsx', import.meta.url), 'utf8')
-    assert.ok(!/localStorage|sessionStorage|fetch\(|console\.|navigate\(/.test(source))
+    assert.ok(!/localStorage|sessionStorage|fetch\(|console\./.test(source))
     assert.match(source, /event.preventDefault\(\)/)
     if (file !== 'ForgotPassword') assert.match(html, /type="password"/)
   }
@@ -382,6 +382,86 @@ try {
   assert.match(loggedIn, /Signed in as/)
   assert.match(loggedIn, /farmer@example.test/)
   assert.ok(!loggedIn.includes(sessionResponse.accessToken))
+  const adminLogin = render(Login, { session: null, admin: true })
+  assert.match(adminLogin, /Administrator Login/)
+  assert.match(adminLogin, /assigned by a trusted database operator/)
+  assert.match(adminLogin, /type="password"/)
+  assert.ok(!adminLogin.includes('Create Account'))
+  const { default: AdminDashboard } = await load('pages/admin/AdminDashboard.tsx')
+  assert.match(render(AdminDashboard), /log in as an administrator/)
+  const { AuthContext: AdminContext } = await load('context/authContextValue.ts')
+  const adminLoading = render(() =>
+    createElement(
+      AdminContext.Provider,
+      { value: { session: verified, checking: false, async signOut() {} } },
+      createElement(AdminDashboard),
+    ),
+  )
+  assert.match(adminLoading, /Checking administrator access and loading counts/)
+  assert.ok(!adminLoading.includes('Registered Accounts'))
+  const { checkAdminAccess, getAdminDashboard } = await load('services/admin.ts')
+  let lastAdminHeaders
+  globalThis.fetch = async (url, options) => {
+    if (String(url).endsWith('/api/auth/me')) return reply(user)
+    lastAdminHeaders = options.headers
+    assert.equal(options.method, 'GET')
+    if (String(url).endsWith('/api/admin/me')) return reply({ ...user, role: 'admin' })
+    assert.ok(String(url).endsWith('/api/admin/dashboard'))
+    return reply({ users: 7, products: 3, orders: 0 })
+  }
+  await checkAdminAccess(user.id)
+  assert.equal(lastAdminHeaders.Authorization, 'Bearer ' + savedSession.access_token)
+  assert.deepEqual(await getAdminDashboard(user.id), { users: 7, products: 3, orders: 0 })
+  savedSession = { ...savedSession, access_token: 'renewed-admin-fixture-token' }
+  await getAdminDashboard(user.id)
+  assert.equal(lastAdminHeaders.Authorization, 'Bearer renewed-admin-fixture-token')
+  for (const status of [401, 403, 503]) {
+    globalThis.fetch = async url =>
+      String(url).endsWith('/api/auth/me')
+        ? reply(user)
+        : reply({ message: 'Safe administrator error' }, status)
+    await assert.rejects(
+      checkAdminAccess(user.id),
+      error => error.status === status && error.message === 'Safe administrator error',
+    )
+    await assert.rejects(getAdminDashboard(user.id), /Safe administrator error/)
+  }
+  globalThis.fetch = async url =>
+    reply(String(url).endsWith('/api/auth/me') ? user : { ...user, role: 'farmer' })
+  await assert.rejects(checkAdminAccess(user.id), /access could not be verified/)
+  globalThis.fetch = async url =>
+    reply(String(url).endsWith('/api/auth/me') ? user : { users: -1, products: 2, orders: 0 })
+  await assert.rejects(getAdminDashboard(user.id), /response was incomplete/)
+  await assert.rejects(getAdminDashboard('different-user'), /log in again/)
+  globalThis.fetch = async () => {
+    throw new Error('Private admin transport information')
+  }
+  await assert.rejects(getAdminDashboard(user.id), /Cannot reach/)
+  savedSession = {
+    user,
+    access_token: sessionResponse.accessToken,
+    refresh_token: sessionResponse.refreshToken,
+  }
+  const adminPageSource = await readFile(
+    new URL('../src/pages/admin/AdminDashboard.tsx', import.meta.url),
+    'utf8',
+  )
+  assert.match(adminPageSource, /disabled/)
+  assert.match(adminPageSource, /Coming Soon/)
+  assert.match(adminPageSource, /role="alert"/)
+  assert.match(adminPageSource, /controller.abort\(\)/)
+  assert.ok(!/localStorage|sessionStorage|console\./.test(adminPageSource))
+  const loginSource = await readFile(new URL('../src/pages/Login.tsx', import.meta.url), 'utf8')
+  assert.ok(
+    loginSource.indexOf('await checkAdminAccess') <
+      loginSource.indexOf("navigate('/admin/dashboard'"),
+  )
+  const routesSource = await readFile(new URL('../src/App.tsx', import.meta.url), 'utf8')
+  assert.match(routesSource, /path="\/admin\/login"/)
+  assert.match(routesSource, /path="\/admin\/dashboard"/)
+  console.log(
+    'PASS: mocked admin identity/count requests, latest-token and account checks, 401/403/503 handling, invalid responses, login/dashboard loading markup and disabled management placeholders. Live admin setup is not verified.',
+  )
   const { AuthContext } = await load('context/authContextValue.ts')
   const { default: Navbar } = await load('components/Navbar.tsx')
   let temporarySession = verified

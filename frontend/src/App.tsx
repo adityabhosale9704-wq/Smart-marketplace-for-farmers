@@ -19,6 +19,7 @@ import MyProducts from './pages/seller/MyProducts'
 import SellerOrders from './pages/seller/SellerOrders'
 import Marketplace from './pages/Marketplace'
 import ProductDetails from './pages/ProductDetails'
+import AdminDashboard from './pages/admin/AdminDashboard'
 
 export default function App() {
   const [session, setSession] = useState<AuthSession | null>(null)
@@ -60,6 +61,8 @@ export default function App() {
             <Route path="/seller/add-product" element={<AddProduct />} />
             <Route path="/seller/dashboard" element={<SellerDashboard />} />
             <Route path="/login" element={<Login session={session} />} />
+            <Route path="/admin/login" element={<Login session={session} admin />} />
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { checkAdminAccess } from '../services/admin'
 import AuthLayout from '../components/auth/AuthLayout'
 import AuthInput from '../components/auth/AuthInput'
 import PasswordInput from '../components/auth/PasswordInput'
@@ -8,7 +9,14 @@ import { loginFarmer } from '../services/auth'
 import type { AuthErrors, AuthSession, LoginForm } from '../types/auth'
 import { focusAuthError, validateLogin } from '../utils/authValidation'
 
-export default function Login({ session }: { session: AuthSession | null }) {
+export default function Login({
+  session,
+  admin = false,
+}: {
+  session: AuthSession | null
+  admin?: boolean
+}) {
+  const navigate = useNavigate()
   const [values, setValues] = useState<LoginForm>({ email: '', password: '', rememberEmail: false })
   const [errors, setErrors] = useState<AuthErrors<LoginForm>>({})
   const [notice, setNotice] = useState('')
@@ -45,9 +53,11 @@ export default function Login({ session }: { session: AuthSession | null }) {
     pending.current = controller
     setLoading(true)
     try {
-      await loginFarmer(values, controller.signal)
+      const verified = await loginFarmer(values, controller.signal)
+      if (admin) await checkAdminAccess(verified.user.id, controller.signal)
       if (!controller.signal.aborted) {
-        setNotice('Login successful. Your identity was verified by the backend.')
+        if (admin) navigate('/admin/dashboard', { replace: true })
+        else setNotice('Login successful. Your identity was verified by the backend.')
       }
     } catch (error) {
       if (!controller.signal.aborted) {
@@ -64,9 +74,17 @@ export default function Login({ session }: { session: AuthSession | null }) {
 
   return (
     <AuthLayout
-      title="Welcome back"
-      description="Explore the future of buying and selling with FarmMarket."
-      notice="Login uses the Express backend and Supabase Auth. Supabase saves your browser session and renews it automatically. Marketplace, seller, order and profile records remain demonstration data."
+      title={admin ? 'Administrator Login' : 'Welcome back'}
+      description={
+        admin
+          ? 'Sign in with your existing FarmMarket account.'
+          : 'Explore the future of buying and selling with FarmMarket.'
+      }
+      notice={
+        admin
+          ? 'Administrator access must be assigned by a trusted database operator. Signing in or registering an account does not grant administrator permissions.'
+          : 'Login uses the Express backend and Supabase Auth. Supabase saves your browser session and renews it automatically. Marketplace, seller, order and profile records remain demonstration data.'
+      }
     >
       <form noValidate onSubmit={submit} aria-busy={loading}>
         <fieldset disabled={loading} className="space-y-5">
@@ -109,7 +127,7 @@ export default function Login({ session }: { session: AuthSession | null }) {
             disabled={loading}
             className="button-primary w-full disabled:opacity-60"
           >
-            {loading ? 'Signing in...' : 'Login'}
+            {loading ? 'Signing in...' : admin ? 'Administrator Login' : 'Login'}
           </button>
           {requestError && (
             <p role="alert" className="text-sm text-red-700">
@@ -117,23 +135,32 @@ export default function Login({ session }: { session: AuthSession | null }) {
             </p>
           )}
           <p role="status" className="text-sm leading-6 text-emerald-900">
-            {session ? notice : ''}
+            {!admin && session ? notice : ''}
           </p>
           {session && (
             <p className="text-sm text-emerald-900">
               Signed in as {session.user.email ?? 'a verified farmer'}. Supabase manages your saved
-              browser session. The profile and seller previews are still demos.
+              browser session.{' '}
+              {admin
+                ? 'Administrator permission is checked separately when you sign in.'
+                : 'The profile and seller previews are still demos.'}
             </p>
           )}
-          <p className="text-sm text-stone-600">
-            New to FarmMarket?{' '}
-            <Link
-              to="/register"
-              className="font-semibold text-emerald-800 underline underline-offset-4"
-            >
-              Create Account
+          {admin ? (
+            <Link to="/login" className="text-sm font-semibold text-emerald-800 underline">
+              Back to farmer login
             </Link>
-          </p>
+          ) : (
+            <p className="text-sm text-stone-600">
+              New to FarmMarket?{' '}
+              <Link
+                to="/register"
+                className="font-semibold text-emerald-800 underline underline-offset-4"
+              >
+                Create Account
+              </Link>
+            </p>
+          )}
         </fieldset>
       </form>
     </AuthLayout>

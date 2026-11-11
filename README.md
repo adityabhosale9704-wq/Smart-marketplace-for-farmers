@@ -1,16 +1,16 @@
 # Smart Marketplace for Farmers
 
-A marketplace for buying and selling agricultural products. Phase 1 Step 13 includes a responsive FarmMarket homepage a searchable, filterable Marketplace, and Product Details pages using demonstration product listings.
+A marketplace for buying and selling agricultural products. Express and Supabase power accounts, profiles and product listings. Cart, checkout and order screens remain demonstrations. Administrator access is prepared and requires the migration and manual assignment described at the end of this README.
 
 ## Stack
 
 - HTML5, React, and TypeScript
 - Vite for development and production builds
 - Tailwind CSS with the official @tailwindcss/vite plugin
-- React Router (react-router-dom), for Home, Marketplace, and a fallback Not Found route
+- React Router (react-router-dom), for public, account, seller and administrator routes
 - Lucide React icons
 
-Planned backend: Node.js and Express.js. Planned database and authentication: Supabase PostgreSQL, Supabase Auth, and JWT. None are integrated yet.
+Backend: Node.js and Express.js. Database and authentication: Supabase PostgreSQL, Supabase Auth and JWT verification. Earlier Phase 1 notes below describe the original demonstration screens; the administrator setup section documents the new, not-yet-activated role system.
 
 ## Frontend commands
 
@@ -202,3 +202,65 @@ Buying links open Marketplace, Cart, and My Orders. Selling links open Seller Da
 Profile values stay in component memory only. The app does not log, transmit, or store them in browser storage/cookies, database, or external services. Use fictional details. Browser autofill/password-manager behavior is controlled by the user/browser, not app persistence. Future Supabase Auth must supply the real identity, Express must verify JWTs and ownership/permissions, and PostgreSQL must store profiles linked to the authenticated identity. None are integrated here.
 
 Run npm run test:profile from frontend for fixtures, validation, normalization, immutable state values, rendered form/card, navigation links, disabled settings, and privacy-related source checks. Existing verification scripts remain regression checks. Manual testing remains for actual Edit/Save/Cancel/Escape, inline errors/focus, card updates, reload reset, responsive appearance, and autofill.
+
+
+## Phase 2 Step 10: Administrator access
+
+Administrator login uses the same Supabase Auth account, Express login API, and browser session as farmer login. Open /admin/login, then /admin/dashboard. There is no administrator registration endpoint or separate password system.
+
+The application role is stored in public.profiles.role. Existing and new profiles default to farmer. Only a trusted database operator can assign admin. Registration metadata and browser profile updates cannot assign it. The role is not a PostgreSQL superuser role.
+
+Every /api/admin request verifies the JWT and reads the caller's role from their own profile. The dashboard's read-only database function independently checks the role before returning aggregate counts. It exposes no user, profile or order details and does not grant broad SELECT policies. Existing RLS remains enabled.
+
+### Review and apply the migration manually
+
+The migration 20261110020000_add_admin_authorization.sql is prepared but has not been applied by this setup. From the Ecommerce root, using Supabase CLI 3:
+
+```powershell
+npx.cmd supabase@3.0.0 migration list --remote
+npx.cmd supabase@3.0.0 db push --dry-run --remote
+```
+
+The first command compares local migration files with hosted migration history. The second previews changes without applying them. Verify the linked project and review every pending migration: the push may include earlier unapplied files. If npx does not have the CLI cached, it may ask to download it. No download is required merely to read this document.
+
+Only after reviewing the preview and explicitly choosing to change the hosted database:
+
+```powershell
+npx.cmd supabase@3.0.0 db push --remote
+```
+
+This last command changes the database and records applied migrations. Do not use --yes to skip review. These commands were not run as part of this setup.
+
+### Assign the first administrator manually
+
+Before promotion, the trusted database operator should run this read-only privilege check after applying the migration:
+
+```sql
+SELECT
+    has_column_privilege('authenticated', 'public.profiles', 'role', 'INSERT') AS can_insert_role,
+    has_column_privilege('authenticated', 'public.profiles', 'role', 'UPDATE') AS can_update_role;
+```
+
+Both results must be false. If either is true, investigate the database grants before assigning an administrator.
+
+1. Use an existing, email-confirmed FarmMarket account, or register an ordinary account yourself. Save its farmer profile through /profile first. No administrator is automatically created.
+2. As the trusted project owner, open Supabase Dashboard > Authentication > Users. Verify the intended account and copy its exact UUID. Do not choose an account based only on a claimed display name.
+3. In the trusted project's SQL Editor, replace the placeholder below with that verified UUID. Review the WHERE condition before executing. Run this as the database operator, never through the browser or public API:
+
+```sql
+UPDATE public.profiles
+SET role = 'admin'
+WHERE id = 'REPLACE_WITH_VERIFIED_USER_UUID'::UUID
+RETURNING id, role;
+```
+
+Exactly one row must return with role admin. Zero rows means the farmer profile is missing or the UUID is wrong: check it instead of removing the WHERE condition. Do not create a partial profile through this assignment step.
+
+4. Sign in at /admin/login. Verify /api/admin/me and /api/admin/dashboard return HTTP 200 with the administrator's current token. Browser sessions are shared with the normal farmer login; use the existing Navbar Logout to sign out.
+5. Verify that an ordinary account receives HTTP 403 even if its Auth metadata contains a role claim. Missing or expired tokens must receive HTTP 401. Open /admin/dashboard after refreshing to confirm a fresh authorization check.
+
+To revoke access, the trusted database operator can run the same targeted UPDATE with role = 'farmer'. The next API request rechecks the role. Already displayed counts are a snapshot and cannot be recalled from a browser.
+
+Counts come from auth.users, public.products and public.orders. Registered Accounts includes unconfirmed accounts; Products includes drafts and zero-stock listings; Orders excludes frontend fictional fixtures. Order management, status changes and payments are not implemented. Management navigation remains disabled Coming Soon placeholders.
+
+Run npm.cmd test from backend. From frontend run npm.cmd run test:auth, npm.cmd run build, npm.cmd run lint and npm.cmd run format:check. Automated admin tests use mocks; they do not prove the SQL grants, first-admin assignment or live admin access. Verify those manually after applying the migration.
